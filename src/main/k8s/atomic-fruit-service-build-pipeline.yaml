@@ -22,11 +22,3 @@ spec:
       outputs:
       - name: image
         resource: app-image
-  - name: deploy
-    taskRef:
-      name: openshift-client
-    runAfter:
-      - build
-    params:
-      - name: ARGS
-        value: "rollout latest atomic-fruit-service"
