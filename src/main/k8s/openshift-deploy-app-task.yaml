@@ -21,8 +21,8 @@ spec:
         - '/bin/sh'
         - '-c'
       args:
-        - DC_NAME=$(/usr/local/bin/oc get dc ${inputs.params.APP_NAME} -o json -n ${inputs.params.NAMESPACE}) ;
-          echo $DC_NAME | awk 'NR>1 {print $1}' &&
+        - DC_NAME=$(/usr/local/bin/oc get dc ${inputs.params.APP_NAME} -n ${inputs.params.NAMESPACE} | awk 'NR>1 {print $1}') ;
+          echo "DC_NAME = $DC_NAME" &&
           if [[ ${inputs.params.APP_NAME} == $DC_NAME ]]; then
             echo $DC_NAME > /work/${inputs.params.APP_NAME} ;
           fi
@@ -43,6 +43,7 @@ spec:
           else
             echo "DeploymentConfig ${inputs.params.APP_NAME} doen't exist so let's create a new app" ;
             /usr/local/bin/oc new-app $IMAGE_STREAM --name ${inputs.params.APP_NAME} -n ${inputs.params.NAMESPACE} ;
+            /usr/local/bin/oc expose svc/${inputs.params.APP_NAME} ;
           fi &&
           exit 0
       volumeMounts:

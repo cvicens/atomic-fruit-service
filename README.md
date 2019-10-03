@@ -302,15 +302,17 @@ s2i-quarkus        6 minutes ago
 Create a pipeline by running the next command.
 
 ```sh
+oc apply -f ./src/main/k8s/atomic-fruit-service-build-pipeline.yaml -n atomic-fruit
 oc apply -f ./src/main/k8s/atomic-fruit-service-deploy-pipeline.yaml -n atomic-fruit
 ```
 
 Let's see if our pipeline is where it should be.
 
 ```sh
-tkn pipeline list
-NAME                                   AGE             LAST RUN   STARTED   DURATION   STATUS
-atomic-fruit-service-deploy-pipeline   9 minutes ago   ---        ---       ---        ---
+ tkn pipeline list
+NAME                                   AGE              LAST RUN                                         STARTED        DURATION     STATUS
+atomic-fruit-service-build-pipeline    11 seconds ago   ---                                              ---            ---          ---
+atomic-fruit-service-deploy-pipeline   1 day ago        atomic-fruit-service-deploy-pipeline-run-bd2hd   23 hours ago   9 minutes    Succeeded
 ```
 
 ## Triggering a pipeline
