@@ -1,0 +1,53 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Task
+metadata:
+  name: openshift-deploy-app
+spec:
+  
+  inputs:
+    resources:
+      - name: app-image
+        type: image
+    params:
+      - name: APP_NAME
+        description: Name to give to the app
+      - name: NAMESPACE
+        description: Namespace where to deploy
+  steps:
+    - name: check-if-dc-exists
+      image: quay.io/openshift-pipeline/openshift-cli:0.5.0
+      workingdir: /work
+      command:
+        - '/bin/sh'
+        - '-c'
+      args:
+        - DC_NAME=$(/usr/local/bin/oc get dc ${inputs.params.APP_NAME} -o json -n ${inputs.params.NAMESPACE}) ;
+          echo $DC_NAME | awk 'NR>1 {print $1}' &&
+          if [[ ${inputs.params.APP_NAME} == $DC_NAME ]]; then
+            echo $DC_NAME > /work/${inputs.params.APP_NAME} ;
+          fi
+      volumeMounts:
+        - name: work
+          mountPath: /work
+    - name: new-app
+      image: quay.io/openshift-pipeline/openshift-cli:0.5.0
+      workingdir: /work
+      command:
+        - '/bin/sh'
+        - '-c'
+      args:
+        - IMAGE_STREAM=$(echo ${inputs.resources.app-image.url} | sed -e 's|^[^/]*/||') &&
+          if [ -f "/work/${inputs.params.APP_NAME}" ]; then
+            echo "DeploymentConfig ${inputs.params.APP_NAME} exist so let's rollout" ;
+            /usr/local/bin/oc rollout latest ${inputs.params.APP_NAME} -n ${inputs.params.NAMESPACE} ;
+          else
+            echo "DeploymentConfig ${inputs.params.APP_NAME} doen't exist so let's create a new app" ;
+            /usr/local/bin/oc new-app $IMAGE_STREAM --name ${inputs.params.APP_NAME} -n ${inputs.params.NAMESPACE} ;
+          fi &&
+          exit 0
+      volumeMounts:
+        - name: work
+          mountPath: /work
+  volumes:
+    - name: work
+      emptyDir: {}

@@ -225,6 +225,128 @@ curl: (6) Could not resolve host: POST
 * Connection #1 to host localhost left intact
 ```
 
-# Testing using the Swagger UI
+## Testing using the Swagger UI
 
-Create a 
+Try to create a new fruit, get all and get by season.
+
+> **WARNING:** Don't forget to delete the `id` property when creating a new fruit because `id` is self-generated.
+
+
+## Building an image locally using S2I
+
+```
+$ s2i build https://github.com/cvicens/atomic-fruit-service quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1 --context-dir=. atomic-fruit-service
+```
+
+```
+$ docker logs $(docker ps | grep quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1 | awk -F ' ' '{print $1}')
+$ docker images | grep atomic-fruit-service
+$ docker inspect --format='{{ index .Config.Labels "io.openshift.s2i.scripts-url" }}' quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1
+$ docker run -it --rm -p 8080 atomic-fruit-service /bin/bash
+
+```
+
+## Building using S2I on Openshift
+
+```sh
+oc new-app quay.io/quarkus/ubi-quarkus-native-s2i:19.1.1~https://github.com/cvicens/atomic-fruit-service --context-dir=. --name=atomic-fruit-service-native -n atomic-fruit
+```
+
+> You may need to add resources to the BuildConfig
+
+```
+spec:
+  resources:
+    limits:
+      cpu: "1500m" 
+      memory: "5Gi"
+```
+
+# Tekton Pipeline
+
+> Ref: https://github.com/openshift/pipelines-tutorial
+
+## Preprequisites
+
+### Install OpenShift Pipelines
+
+https://github.com/openshift/pipelines-tutorial/blob/master/install-operator.md
+
+### Adjusting security configuration
+
+Building container images using build tools such as S2I, Buildah, Kaniko, etc require privileged access to the cluster. OpenShift default security settings do not allow privileged containers unless specifically configured. Create a service account for running pipelines and enable it to run privileged pods for building images:
+
+```sh
+$ oc create serviceaccount pipeline
+$ oc adm policy add-scc-to-user privileged -z pipeline
+$ oc adm policy add-role-to-user edit -z pipeline
+```
+
+## Create tasks
+
+```sh
+oc apply -f ./src/main/k8s/openshift-client-task.yaml -n atomic-fruit
+oc apply -f ./src/main/k8s/s2i-quarkus-task.yaml -n atomic-fruit
+```
+Check that our tasks are there.
+
+```sh
+tkn tasks list
+NAME               AGE
+openshift-client   35 minutes ago
+s2i-quarkus        6 minutes ago
+```
+
+## Create a pipeline with those tasks
+
+Create a pipeline by running the next command.
+
+```sh
+oc apply -f ./src/main/k8s/atomic-fruit-service-deploy-pipeline.yaml -n atomic-fruit
+```
+
+Let's see if our pipeline is where it should be.
+
+```sh
+tkn pipeline list
+NAME                                   AGE             LAST RUN   STARTED   DURATION   STATUS
+atomic-fruit-service-deploy-pipeline   9 minutes ago   ---        ---       ---        ---
+```
+
+## Triggering a pipeline
+
+Triggering pipelines is an area that is under development and in the next release it will be possible to be done via the OpenShift web console and Tekton CLI. In this tutorial, you will trigger the pipeline through creating the Kubernetes objects (the hard way!) in order to learn the mechanics of triggering.
+
+First, you should create a number of PipelineResources that contain the specifics of the Git repository and image registry to be used in the pipeline during execution. Expectedly, these are also reusable across multiple pipelines.
+
+```sh
+oc apply -f ./src/main/k8s/atomic-fruit-service-resources.yaml -n atomic-fruit
+```
+List those resources we've just created.
+
+```sh
+$ tkn resources list
+NAME                         TYPE    DETAILS
+atomic-fruit-service-git     git     url: https://github.com/cvicens/atomic-fruit-service
+atomic-fruit-service-image   image   url: image-registry.openshift-image-registry.svc:5000/atomic-fruit/atomic-fruit-service
+```
+
+Now it's time to actually trigger the pipeline.
+
+> **NOTE 1:** you may need to delete or tune limit in your namespace as in `oc delete limitrange --all -n atomic-fruit`
+> **NOTE 2:** The -r flag specifies the PipelineResources that should be provided to the pipeline and the -s flag specifies the service account to be used for running the pipeline.
+
+```sh
+$ tkn pipeline start atomic-fruit-service-deploy-pipeline \
+        -r app-git=atomic-fruit-service-git \
+        -r app-image=atomic-fruit-service-image \
+        -p APP_NAME=atomic-fruit-service \
+        -p NAMESPACE=atomic-fruit \
+        -s pipeline
+
+Pipelinerun started: atomic-fruit-service-deploy-pipeline-run-xdtvs
+
+In order to track the pipelinerun progress run:
+tkn pipelinerun logs atomic-fruit-service-deploy-pipeline-run-xdtvs -f -n atomic-fruit
+```
+
