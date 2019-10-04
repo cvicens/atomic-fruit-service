@@ -5,7 +5,7 @@ This is sample service generated from a maven artifact with the next command.
 ```sh
 mvn io.quarkus:quarkus-maven-plugin:$QUARKUS_VERSION:create \
   -DprojectGroupId="com.redhat.atomic.fruit" \
-  -DprojectArtifactId="atomic-fruit-app" \
+  -DprojectArtifactId="atomic-fruit-service" \
   -DprojectVersion="1.0-SNAPSHOT" \
   -DclassName="FruitResource" \
   -Dpath="fruit"
