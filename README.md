@@ -336,7 +336,23 @@ atomic-fruit-service-image   image   url: image-registry.openshift-image-registr
 Now it's time to actually trigger the pipeline.
 
 > **NOTE 1:** you may need to delete or tune limit in your namespace as in `oc delete limitrange --all -n atomic-fruit`
-> **NOTE 2:** The -r flag specifies the PipelineResources that should be provided to the pipeline and the -s flag specifies the service account to be used for running the pipeline.
+> **NOTE 2:** The `-r` flag specifies the PipelineResources that should be provided to the pipeline and the `-s` flag specifies the service account to be used for running the pipeline finally `-p` is for parameters.
+
+
+Let's trigger a quarkus native build
+
+```sh
+$ tkn pipeline start atomic-fruit-service-build-pipeline \
+        -r app-git=atomic-fruit-service-git \
+        -r app-image=atomic-fruit-service-image \
+        -p APP_NAME=atomic-fruit-service \
+        -p NAMESPACE=atomic-fruit \
+        -s pipeline
+
+
+```
+
+Now let's deploy our app as a normal DeployConfig.
 
 ```sh
 $ tkn pipeline start atomic-fruit-service-deploy-pipeline \
