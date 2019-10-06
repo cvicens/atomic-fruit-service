@@ -541,7 +541,7 @@ You should the the same results as before.
 
 > Swagger UI is not available because by default is available only in `dev` mode.
 
-# Tekton Pipeline
+# Creating a Tekton Pipeline to Build and Deploy our app
 
 > Ref: https://github.com/openshift/pipelines-tutorial
 
@@ -667,5 +667,80 @@ Pipelinerun started: atomic-fruit-service-deploy-pipeline-run-xdtvs
 
 In order to track the pipelinerun progress run:
 tkn pipelinerun logs atomic-fruit-service-deploy-pipeline-run-xdtvs -f -n atomic-fruit
+```
+After a success in the prevous pipeline run you should be able to test our app.
+
+```sh
+curl http://$(oc get route atomic-fruit-service | awk 'NR > 1 { print $2 }')/fruit
+```
+
+Again, the result should be the same.
+
+# Going a step beyond, going serverless
+
+## Preprequisites
+
+https://redhat-developer-demos.github.io/knative-tutorial/knative-tutorial-basics/0.7.x/01-setup.html
+
+### Install the Knative Serving
+
+<Insert screenshots, done with the webconsole>
+
+Check all is good.
+
+```sh
+$ oc get pod -n knative-serving
+NAME                                         READY   STATUS    RESTARTS   AGE
+activator-589784bc58-7c96f                   1/1     Running   0          48s
+autoscaler-74bb8b4657-xpf24                  1/1     Running   0          47s
+controller-7c9bfbd76-7txt6                   1/1     Running   0          42s
+knative-openshift-ingress-57f5bb9ccd-q6grs   1/1     Running   0          38s
+networking-certmanager-6fd9dd44bb-m57jt      1/1     Running   0          42s
+networking-istio-784c7c97c-q969p             1/1     Running   0          41s
+webhook-798f4bc969-92mvs                     1/1     Running   0          41s
+```
+
+### Install Knative Eventing
+<Insert screenshots, done with the webconsole>
+
+> **Beware!** This could take 2 mins or so...
+
+Check all is good.
+
+```sh
+$ oc get pod -n knative-eventing
+NAME                                            READY   STATUS    RESTARTS   AGE
+eventing-controller-5f84884d54-857f6            1/1     Running   0          48s
+eventing-webhook-5798db889d-ss9jm               1/1     Running   0          47s
+imc-controller-5dbf7dd77b-2w4ph                 1/1     Running   0          37s
+imc-dispatcher-5d6c448bcb-q5km2                 1/1     Running   0          37s
+in-memory-channel-controller-75c954fd67-qt2ql   1/1     Running   0          43s
+in-memory-channel-dispatcher-8b7fcf4fd-l2rgm    1/1     Running   0          41s
+sources-controller-578b47f948-rg7fq             1/1     Running   0          47s
+```
+
+### Adding Security Constraints
+
+```sh
+$ oc adm policy add-scc-to-user privileged -z default -n atomic-fruit
+$ oc adm policy add-scc-to-user anyuid -z default -n atomic-fruit
+```
+
+## Adding health checks extension
+
+```sh
+./mvnw quarkus:add-extension -Dextension="health"
+```
+
+Run in `dev` mode and run this:
+
+```sh
+curl http://localhost:8080/health
+
+{
+    "status": "UP",
+    "checks": [
+    ]
+}
 ```
 
