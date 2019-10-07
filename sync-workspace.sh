@@ -2,7 +2,7 @@
 
 # TODO: Do this with Che API
 
-CHE_WORKSPACE="atomic-fruit-service-cvicens"
+CHE_WORKSPACE="atomic-fruit-service"
 
 KEYCLOAK_CHE_HOST=keycloak-atomic-fruit.apps.cluster-kharon-68a8.kharon-68a8.open.redhat.com
 

@@ -148,8 +148,12 @@ docker push quay.io/<quay_user>/atomic-fruit-service:1.0-SNAPSHOT
 You can configure Quarkus logging by setting the following parameters to `$PROJECT_HOME/src/main/resources/application.properties`:
 
 ```properties
+# Enable logging
 quarkus.log.console.enable=true
 quarkus.log.console.level=DEBUG
+
+# Log level settings
+quarkus.log.category."com.redhat.atomic".level=DEBUG
 ```
 
 Update `$PROJECT_HOME/src/main/java/com/redhat/atomic/fruit/FruitResource.java` with the relevant lines bellow.
@@ -434,7 +438,7 @@ curl: (6) Could not resolve host: POST
 * Connection #1 to host localhost left intact
 ```
 
-## Adding Swagger UI
+## Adding Swagger UI to ease API development and testing
 
 You can easily generate en OpenAPI compliant description of your API and at additionally add a Swagger UI to your app by adding the `openapi` extension as follows.
 
@@ -461,6 +465,26 @@ Now click on **Execute** eventually you should get a result similar to this one.
 > Pay attention to **Code**, it should be **201**.
 
 ![Create Fruit 1](./docs/images/create-fruit-2.png)
+
+## Adding health checks
+
+Health checks is one of those things that if recommendable in general is a must for every Cloud Native App and in quarkus it's a extension so let's add it.
+
+```sh
+./mvnw quarkus:add-extension -Dextension="health"
+```
+
+Run in `dev` mode, for instace and then test the `/health` endpoint like this:
+
+```sh
+curl http://localhost:8080/health
+
+{
+    "status": "UP",
+    "checks": [
+    ]
+}
+```
 
 # Using S2I to create an image for our app
 
@@ -726,21 +750,19 @@ $ oc adm policy add-scc-to-user privileged -z default -n atomic-fruit
 $ oc adm policy add-scc-to-user anyuid -z default -n atomic-fruit
 ```
 
-## Adding health checks extension
+## Deploy our app as Knative Service
 
 ```sh
-./mvnw quarkus:add-extension -Dextension="health"
+oc apply -n atomic-fruit -f ./src/main/k8s/atomic-fruit-knative-service.yaml
 ```
-
-Run in `dev` mode and run this:
 
 ```sh
-curl http://localhost:8080/health
-
-{
-    "status": "UP",
-    "checks": [
-    ]
-}
+oc get deployments -n atomic-fruit
+NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
+atomic-fruit-service-v1-deployment   0/1     1            0           22s
 ```
 
+```sh
+export SVC_URL=`oc get rt atomic-fruit-service -o yaml | yq -r .status.url` && \
+> http $SVC_URL
+```
