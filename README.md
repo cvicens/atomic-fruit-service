@@ -1,6 +1,6 @@
 # Atomic Fruit Service
 
-This is sample Fruit service generated from a maven artifact that generates all the needed Java scaffolf for a Quarkus Maven app.
+This is sample Fruit service generated from a maven artifact that generates all the needed Java scaffold for a Quarkus Maven app.
 
 > Don't worry, there's also a Gradle counterpart ;-)
 
@@ -66,7 +66,7 @@ oc login ...
 oc new-project atomic-fruit
 ```
 
-# Generate the Quarkus app scaffolf using a maven archetype
+# Generate the Quarkus app scaffold using a maven archetype
 
 ```sh
 mvn io.quarkus:quarkus-maven-plugin:$QUARKUS_VERSION:create \
