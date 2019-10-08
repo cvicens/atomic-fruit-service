@@ -1,0 +1,21 @@
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: atomic-fruit-knative
+spec:
+  template:
+    metadata:
+      name: atomic-fruit-knative-v1
+      annotations:
+        # disable istio-proxy injection
+        sidecar.istio.io/inject: "false"
+    spec:
+      containers:
+      - #image: quay.io/cvicensa/atomic-fruit-service:1.0-SNAPSHOT
+        image: image-registry.openshift-image-registry.svc:5000/atomic-fruit/atomic-fruit-service:latest
+        livenessProbe:
+          httpGet:
+            path: /health
+        readinessProbe:
+          httpGet:
+            path: /health

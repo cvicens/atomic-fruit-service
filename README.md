@@ -8,20 +8,38 @@ This is sample Fruit service generated from a maven artifact that generates all 
 
 > **NOTE:** Change to the cloned folder.
 
-## Download GraalVM and set GraaVM env
+## Setting demo environment variables
 
-Choose linux, darwin or windows as needed...
+> *You can alternatively run:* `$ . ./env.sh`
 
 ```sh
+export PROJECT_NAME="atomic-fruit"
+
 export GRAALVM_VERSION="19.2.0.1"
 GRAALVM_HOME=$(pwd)/graalvm-ce-${GRAALVM_VERSION}
 if [[ "$OSTYPE" == "darwin"* ]]; then GRAALVM_HOME=${GRAALVM_HOME}/Contents/Home ; fi
 export GRAALVM_HOME
 export PATH=${GRAALVM_HOME}/bin:$PATH
+
 if [[ "$OSTYPE" == "linux"* ]]; then GRAALVM_OSTYPE=linux ; fi
 if [[ "$OSTYPE" == "darwin"* ]]; then GRAALVM_OSTYPE=darwin ; fi
 export GRAALVM_OSTYPE
+
+export KNATIVE_CLI_VERSION="0.2.0"
+if [[ "$OSTYPE" == "linux"* ]]; then KNATIVE_OSTYPE=Linux ; fi
+if [[ "$OSTYPE" == "darwin"* ]]; then KNATIVE_OSTYPE=Darwin ; fi
+export KNATIVE_OSTYPE
+
+export TEKTON_CLI_VERSION="0.4.0"
+if [[ "$OSTYPE" == "linux"* ]]; then TEKTON_OSTYPE=Linux ; fi
+if [[ "$OSTYPE" == "darwin"* ]]; then TEKTON_OSTYPE=Darwin ; fi
+export TEKTON_OSTYPE
+
+mkdir ./bin
+export PATH=$(pwd)/bin:$PATH
 ```
+
+## Download GraalVM and set GraaVM env
 
 Now download GraalVM for your system...
 
@@ -230,7 +248,7 @@ Return the value of `greetings.message` back to `hello` and stop the app with Ct
 We're going to deploy PostgreSQL using a template, in general an operator is a better choice but for the sake of simplicity in this demo a template is a good choice.
 
 ```sh
-oc new-app -n atomic-fruit -p DATABASE_SERVICE_NAME=my-database -p POSTGRESQL_USER=luke -p POSTGRESQL_PASSWORD=secret -p POSTGRESQL_DATABASE=my_data -p POSTGRESQL_VERSION=10 postgresql-persistent
+oc new-app -n ${PROJECT_NAME} -p DATABASE_SERVICE_NAME=my-database -p POSTGRESQL_USER=luke -p POSTGRESQL_PASSWORD=secret -p POSTGRESQL_DATABASE=my_data -p POSTGRESQL_VERSION=10 postgresql-persistent
 ```
 
 ## Adding DB related extensions
@@ -388,7 +406,7 @@ INSERT INTO Fruit(id,name,season) VALUES ( nextval ('hibernate_sequence') , 'Gra
 In a different terminal...
 
 ```sh
-oc -n atomic-fruit port-forward svc/my-database 5432
+oc -n ${PROJECT_NAME} port-forward svc/my-database 5432
 ```
 
 In your current terminal run your code using profile `dev`
@@ -486,11 +504,83 @@ curl http://localhost:8080/health
 }
 ```
 
+# Moving to Eclipse Che
+
+## Create a Workspace
+
+Select Stack `Java 11 Maven`
+
+Change app repo and name
+
+Click on `Create and Open`
+
+## [OPTIONAL] Add `oc` CLI
+
+Open a terminal to container `maven`
+
+Create a `bin` dir in `${CHE_PROJECTS_ROOT}` (default dir).
+
+```sh
+mkdir ${CHE_PROJECTS_ROOT}/bin
+export PATH=${CHE_PROJECTS_ROOT}/bin:$PATH
+curl -OL https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.1.14/openshift-client-linux-4.1.14.tar.gz
+tar xvzf openshift-client-linux-4.1.14.tar.gz -C ${CHE_PROJECTS_ROOT}/bin oc
+oc version
+rm openshift-client-linux-4.1.14.tar.gz
+```
+
+## Run our app in `dev` mode but using our custom profile `che`
+
+Open a terminal to container `maven` if not already done. It's two step action, first go to `Terminal`->`Open Terminal in specific container`.
+
+![Open Terminal in Che 1](./docs/images/open-terminal-che-1.png)
+
+Then select the container, in our case `maven`.
+
+![Open Terminal in Che 1](./docs/images/open-terminal-che-2.png)
+
+Finally be sure you're inside our project folder, if you followed intructions to the letter `${CHE_PROJECTS_ROOT}/atomic-fruit-service`.
+
+> **WARNING:** If you experience this error just use `mvn` instead of `./mvnw`
+> 
+> ```sh
+> [ERROR] Unknown lifecycle phase "/home/user/.m2". ...
+> ```
+>
+
+```sh
+mvn compile quarkus:dev -Dquarkus.profile=che
+```
+
+If everything is fine you should get no errors and receive a couple of notifications as in the next pic.
+
+![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-1.png)
+
+One of the notifications is related to the debugging port `5005` the other to the port where our app is listening inside the container `8080`. Let's concentrate on the latter, if you click `yes` this port (internal so far) will be exposed so that we can send request from the internet, please do so.
+
+![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-2.png)
+
+Now we you should have received another notification related to the same port, this time announcing that the redirection is in place. Click on `Open Link` this will open an internal browser window to our app default web page.
+
+![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-3.png)
+
+Click on the upper right corner icon so that you can open the link in a new tab, then add `/swagger-ui`  to the url and as we did before test the API.
+
+![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-4.png)
+
+> ***Did you notice*** that you didn't need to use `port-forward` and everything worked properly. This is because the `che` profile points to the dabase using a the DNS name of the database including the namespace where it is running into.
+>
+> **WARNING:** Of course if you have deployed the database in a different namespace you should modify property `%che.quarkus.datasource.url` accordingly.
+
+```properties
+%che.quarkus.datasource.url = jdbc:postgresql://my-database.atomic-fruit:5432/my_data
+```
+
 # Using S2I to create an image for our app
 
-## Building an image locally using S2I
+## [OPTIONAL] Building an image locally using S2I
 
-> This step is optional and requires you have installed `s2i`, you can find he binary [here](https://github.com/openshift/source-to-image/releases).
+> **This step is optional and requires you have installed `s2i`**, you can find he binary [here](https://github.com/openshift/source-to-image/releases).
 
 ```
 $ s2i build . quay.io/quarkus/ubi-quarkus-native-s2i:${GRAALVM_VERSION} --context-dir=. atomic-fruit-service
@@ -518,10 +608,10 @@ $ docker run -it --rm -p 8080 atomic-fruit-service ${ENTRYPOINT}
 
 But the truth is that you don't need to tun `s2i` locally... you would usually use S2I on Openshift. As follows:
 
-> **NOTE:** Creating a Quarkus native binary requires some memory, maybe you need to either adapt your LimitRange (if there's any) or simply delete it (if this is suitable in your case) as in here: `oc delete limitrange --all -n atomic-fruit`
+> **NOTE:** Creating a Quarkus native binary requires some memory, maybe you need to either adapt your LimitRange (if there's any) or simply delete it (if this is suitable in your case) as in here: `oc delete limitrange --all -n ${PROJECT_NAME}`
 
 ```sh
-oc new-app quay.io/quarkus/ubi-quarkus-native-s2i:${GRAALVM_VERSION}~https://github.com/cvicens/atomic-fruit-service --context-dir=. --name=atomic-fruit-service-native -n atomic-fruit
+oc new-app quay.io/quarkus/ubi-quarkus-native-s2i:${GRAALVM_VERSION}~https://github.com/cvicens/atomic-fruit-service --context-dir=. --name=atomic-fruit-service-native -n ${PROJECT_NAME}
 ```
 
 > You may need to add resources to the BuildConfig
@@ -537,7 +627,7 @@ spec:
 You can monitor the status of the build with:
 
 ```sh
-oc logs -f bc/atomic-fruit-service-native -n atomic-fruit
+oc logs -f bc/atomic-fruit-service-native -n ${PROJECT_NAME}
 ```
 
 Once the build has succeded...
@@ -552,7 +642,7 @@ Push successful
 Just because you use S2I to create a new app (hence building the image) your app (its service actually) is not exposed. Let's expose it:
 
 ```sh
-oc expose svc/atomic-fruit-service-native -n atomic-fruit
+oc expose svc/atomic-fruit-service-native -n ${PROJECT_NAME}
 ```
 
 Now we can try our Quarkus native app from the Internet ;-)
@@ -567,30 +657,24 @@ You should the the same results as before.
 
 # Creating a Tekton Pipeline to Build and Deploy our app
 
-> Ref: https://github.com/openshift/pipelines-tutorial
+This part of the guide is explained in more detail in the [OpenShift Pipelines Tutorial](https://github.com/openshift/pipelines-tutorial)
 
 ## Preprequisites
 
 ### Install Knative CLI
 
 ```sh
-$ mkdir ./bin
-$ export PATH=$(pwd)/bin:$PATH
-$ curl -L https://github.com/knative/client/releases/download/v0.2.0/kn-${GRAALVM_OSTYPE}-amd64  -o ./bin/kn
-$ chmod u+x ./bin/kn
-$ kn version
+curl -L https://github.com/knative/client/releases/download/v${KNATIVE_CLI_VERSION}/kn-${GRAALVM_OSTYPE}-amd64  -o ./bin/kn
+chmod u+x ./bin/kn
+kn version
 ```
 
 ### Install Tekton CLI
 
 ```sh
-$ if [[ "$OSTYPE" == "linux"* ]]; then TEKTON_OSTYPE=Linx ; fi
-$ if [[ "$OSTYPE" == "darwin"* ]]; then TEKTON_OSTYPE=Darwin ; fi
-$ curl -LO https://github.com/tektoncd/cli/releases/download/v0.4.0/tkn_0.4.0_${TEKTON_OSTYPE}_x86_64.tar.gz
-$ tar xvzf tkn_0.4.0_${TEKTON_OSTYPE}_x86_64.tar.gz -C $(pwd)/bin tkn
-$ tkn version
-Client version: 0.4.0
-
+curl -LO https://github.com/tektoncd/cli/releases/download/v${TEKTON_CLI_VERSION}/tkn_${TEKTON_CLI_VERSION}_${TEKTON_OSTYPE}_x86_64.tar.gz
+tar xvzf tkn_${TEKTON_CLI_VERSION}_${TEKTON_OSTYPE}_x86_64.tar.gz -C $(pwd)/bin tkn
+tkn version
 ```
 
 ### Install OpenShift Pipelines
@@ -602,17 +686,18 @@ https://github.com/openshift/pipelines-tutorial/blob/master/install-operator.md
 Building container images using build tools such as S2I, Buildah, Kaniko, etc require privileged access to the cluster. OpenShift default security settings do not allow privileged containers unless specifically configured. Create a service account for running pipelines and enable it to run privileged pods for building images:
 
 ```sh
-$ oc create serviceaccount pipeline -n atomic-fruit
-$ oc adm policy add-scc-to-user privileged -z pipeline -n atomic-fruit
-$ oc adm policy add-role-to-user edit -z pipeline -n atomic-fruit
+oc create serviceaccount pipeline -n ${PROJECT_NAME}
+oc adm policy add-scc-to-user privileged -z pipeline -n ${PROJECT_NAME}
+oc adm policy add-role-to-user edit -z pipeline -n ${PROJECT_NAME}
 ```
 
 ## Create tasks
 
 ```sh
-oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/openshift-deploy-app-task.yaml -n atomic-fruit
-oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/s2i-quarkus-task.yaml -n atomic-fruit
+oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/openshift-deploy-app-task.yaml -n ${PROJECT_NAME}
+oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/s2i-quarkus-task.yaml -n ${PROJECT_NAME}
 ```
+
 Check that our tasks are there.
 
 ```sh
@@ -627,8 +712,8 @@ s2i-quarkus        6 minutes ago
 Create a pipeline by running the next command.
 
 ```sh
-$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-build-pipeline.yaml -n atomic-fruit
-$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-deploy-pipeline.yaml -n atomic-fruit
+$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-build-pipeline.yaml -n ${PROJECT_NAME}
+$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-deploy-pipeline.yaml -n ${PROJECT_NAME}
 ```
 
 Let's see if our pipeline is where it should be.
@@ -647,7 +732,7 @@ Triggering pipelines is an area that is under development and in the next releas
 First, you should create a number of PipelineResources that contain the specifics of the Git repository and image registry to be used in the pipeline during execution. Expectedly, these are also reusable across multiple pipelines.
 
 ```sh
-$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-resources.yaml -n atomic-fruit
+$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-resources.yaml -n ${PROJECT_NAME}
 ```
 List those resources we've just created.
 
@@ -660,38 +745,42 @@ atomic-fruit-service-image   image   url: image-registry.openshift-image-registr
 
 Now it's time to actually trigger the pipeline.
 
-> **NOTE 1:** you may need to delete or tune limit in your namespace as in `oc delete limitrange --all -n atomic-fruit`
+> **NOTE 1:** you may need to delete or tune limit in your namespace as in `oc delete limitrange --all -n ${PROJECT_NAME}`
 > **NOTE 2:** The `-r` flag specifies the PipelineResources that should be provided to the pipeline and the `-s` flag specifies the service account to be used for running the pipeline finally `-p` is for parameters.
 
 
-Let's trigger a quarkus native build
+Let's trigger a quarkus native build using a Tekton pipeline.
 
 ```sh
 $ tkn pipeline start atomic-fruit-service-build-pipeline \
         -r app-git=atomic-fruit-service-git \
         -r app-image=atomic-fruit-service-image \
         -p APP_NAME=atomic-fruit-service \
-        -p NAMESPACE=atomic-fruit \
+        -p NAMESPACE=${PROJECT_NAME} \
         -s pipeline
 
+Pipelinerun started: atomic-fruit-service-build-pipeline-run-piu8y
 
+In order to track the pipelinerun progress run:
+tkn pipelinerun logs atomic-fruit-service-build-pipeline-run-piu8y -f -n ${PROJECT_NAME}
 ```
 
-Now let's deploy our app as a normal DeployConfig.
+Now let's deploy our app as a normal DeployConfig using a S2I task in a Tekton pipeline.
 
 ```sh
 $ tkn pipeline start atomic-fruit-service-deploy-pipeline \
         -r app-git=atomic-fruit-service-git \
         -r app-image=atomic-fruit-service-image \
         -p APP_NAME=atomic-fruit-service \
-        -p NAMESPACE=atomic-fruit \
+        -p NAMESPACE=${PROJECT_NAME} \
         -s pipeline
 
 Pipelinerun started: atomic-fruit-service-deploy-pipeline-run-xdtvs
 
 In order to track the pipelinerun progress run:
-tkn pipelinerun logs atomic-fruit-service-deploy-pipeline-run-xdtvs -f -n atomic-fruit
+tkn pipelinerun logs atomic-fruit-service-deploy-pipeline-run-xdtvs -f -n ${PROJECT_NAME}
 ```
+
 After a success in the prevous pipeline run you should be able to test our app.
 
 ```sh
@@ -746,18 +835,18 @@ sources-controller-578b47f948-rg7fq             1/1     Running   0          47s
 ### Adding Security Constraints
 
 ```sh
-$ oc adm policy add-scc-to-user privileged -z default -n atomic-fruit
-$ oc adm policy add-scc-to-user anyuid -z default -n atomic-fruit
+oc adm policy add-scc-to-user privileged -z default -n ${PROJECT_NAME}
+oc adm policy add-scc-to-user anyuid -z default -n ${PROJECT_NAME}
 ```
 
 ## Deploy our app as Knative Service
 
 ```sh
-oc apply -n atomic-fruit -f ./src/main/k8s/atomic-fruit-knative-service.yaml
+oc apply -n ${PROJECT_NAME} -f ./src/main/k8s/atomic-fruit-knative-service.yaml
 ```
 
 ```sh
-oc get deployments -n atomic-fruit
+oc get deployments -n ${PROJECT_NAME}
 NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
 atomic-fruit-service-v1-deployment   0/1     1            0           22s
 ```
