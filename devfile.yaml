@@ -1,0 +1,70 @@
+metadata:
+  name: atomic-fruit-service
+commands:
+  - name: maven build
+    actions:
+      - component: maven
+        command: mvn clean install
+        workdir: '${CHE_PROJECTS_ROOT}/console-java-simple'
+        type: exec
+    attributes: {}
+  - name: maven build and run
+    actions:
+      - component: maven
+        command: mvn clean install && java -jar ./target/*.jar
+        workdir: '${CHE_PROJECTS_ROOT}/console-java-simple'
+        type: exec
+    attributes: {}
+projects:
+  - source:
+      location: 'https://github.com/cvicens/atomic-fruit-service.git'
+      type: git
+    name: atomic-fruit-service
+components:
+  - args: []
+    env: []
+    selector: {}
+    entrypoints: []
+    endpoints: []
+    command: []
+    volumes: []
+    preferences: {}
+    id: redhat/java/latest
+    type: chePlugin
+  - args: []
+    env:
+      - name: MAVEN_CONFIG
+        value: /home/user/.m2
+      - name: MAVEN_OPTS
+        value: >-
+          -XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
+          -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
+          -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true
+          -Xms20m -Djava.security.egd=file:/dev/./urandom -Duser.home=/home/user
+      - name: JAVA_OPTS
+        value: >-
+          -XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
+          -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
+          -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true
+          -Xms20m -Djava.security.egd=file:/dev/./urandom
+      - name: JAVA_TOOL_OPTIONS
+        value: >-
+          -XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
+          -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
+          -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true
+          -Xms20m -Djava.security.egd=file:/dev/./urandom
+    selector: {}
+    mountSources: true
+    image: 'quay.io/eclipse/che-java11-maven:7.2.0'
+    entrypoints: []
+    endpoints: []
+    command: []
+    alias: maven
+    memoryLimit: 512Mi
+    volumes:
+      - containerPath: /home/user/.m2
+        name: m2
+    preferences: {}
+    type: dockerimage
+apiVersion: 1.0.0
+attributes: {}
