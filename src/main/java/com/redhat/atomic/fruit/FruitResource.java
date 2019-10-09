@@ -23,15 +23,16 @@ import org.jboss.logging.Logger;
 public class FruitResource {
     Logger logger = Logger.getLogger(FruitResource.class);
 
-    @ConfigProperty(name = "greetings.message", defaultValue = "hello")
-    String message;
+    @ConfigProperty(name = "atomic-fruit.welcome", defaultValue = "Welcome")
+    String welcome;
     
-    //@GET
-    //@Produces(MediaType.TEXT_PLAIN)
-    //public String hello() {
-    //    logger.debug("Hello method is called");
-    //    return message;
-    //}
+    @GET
+    @Path("welcome")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String welcome() {
+        logger.debug("welcome method is called");
+        return welcome;
+    }
 
     @GET
     public List<Fruit> allFruits() {

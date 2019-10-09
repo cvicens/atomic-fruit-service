@@ -333,8 +333,16 @@ import org.jboss.logging.Logger;
 public class FruitResource {
     Logger logger = Logger.getLogger(FruitResource.class);
 
-    @ConfigProperty(name = "greetings.message", defaultValue = "hello")
-    String message;
+    @ConfigProperty(name = "atomic-fruit.welcome", defaultValue = "Welcome")
+    String welcome;
+    
+    @GET
+    @Path("welcome")
+    @Produces(MediaType.TEXT_PLAIN)
+    public String welcome() {
+        logger.debug("welcome method is called");
+        return welcome;
+    }
     
     @GET
     public List<Fruit> allFruits() {
@@ -576,7 +584,15 @@ Click on the upper right corner icon so that you can open the link in a new tab,
 %che.quarkus.datasource.url = jdbc:postgresql://my-database.atomic-fruit:5432/my_data
 ```
 
-# Using S2I to create an image for our app
+## Sync local folder with remote folder in a CHE workspace
+
+This is just an example call to the `sync-workspace.sh` script.
+
+```sh
+./sync-workspace.sh crw atomic-fruit-service apps.cluster-kharon-688a.kharon-688a.open.redhat.com
+```
+
+# Using S2I (Source to Image) to create an image for our app
 
 ## [OPTIONAL] Building an image locally using S2I
 
@@ -839,7 +855,7 @@ oc adm policy add-scc-to-user privileged -z default -n ${PROJECT_NAME}
 oc adm policy add-scc-to-user anyuid -z default -n ${PROJECT_NAME}
 ```
 
-## Deploy our app as Knative Service
+## Deploy your app as Knative Service
 
 ```sh
 oc apply -n ${PROJECT_NAME} -f ./src/main/k8s/atomic-fruit-knative-service.yaml
