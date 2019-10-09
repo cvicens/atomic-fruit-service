@@ -205,10 +205,10 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @Path("/fruit")
 public class FruitResource {
 
-    @ConfigProperty(name = "greetings.message")
-    String message;
-    ...
-    @GET
+  @ConfigProperty(name = "greetings.message")
+  String message;
+  ...
+  @GET
   @Produces(MediaType.TEXT_PLAIN)
   public String hello() {
       logger.debug("Hello method is called"); // logging
@@ -522,6 +522,8 @@ Change app repo and name
 
 Click on `Create and Open`
 
+![Create Java 11 Maven Workspace](./docs/images/che-create-workspace-1.png)
+
 ## [OPTIONAL] Add `oc` CLI
 
 Open a terminal to container `maven`
@@ -728,8 +730,8 @@ s2i-quarkus        6 minutes ago
 Create a pipeline by running the next command.
 
 ```sh
-$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-build-pipeline.yaml -n ${PROJECT_NAME}
-$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-deploy-pipeline.yaml -n ${PROJECT_NAME}
+oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-build-pipeline.yaml -n ${PROJECT_NAME}
+oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-deploy-pipeline.yaml -n ${PROJECT_NAME}
 ```
 
 Let's see if our pipeline is where it should be.
@@ -748,7 +750,7 @@ Triggering pipelines is an area that is under development and in the next releas
 First, you should create a number of PipelineResources that contain the specifics of the Git repository and image registry to be used in the pipeline during execution. Expectedly, these are also reusable across multiple pipelines.
 
 ```sh
-$ oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-resources.yaml -n ${PROJECT_NAME}
+oc apply -f https://raw.githubusercontent.com/cvicens/atomic-fruit-service/master/src/main/k8s/atomic-fruit-service-resources.yaml -n ${PROJECT_NAME}
 ```
 List those resources we've just created.
 
@@ -813,7 +815,21 @@ https://redhat-developer-demos.github.io/knative-tutorial/knative-tutorial-basic
 
 ### Install the Knative Serving
 
-<Insert screenshots, done with the webconsole>
+Go to `Catalog->Operatorhub` and look for `knative` you should get results similar to these ones. Click on Knative Serving Operator.
+
+![Install Knative Serving 1](./docs/images/knative-serving-install-1.png)
+
+Now click on `Install` to install the Serving part of Knative.
+
+![Install Knative Serving 2](./docs/images/knative-serving-install-2.png)
+
+As you see in the next picture this operator is installed cluster-wide. Click on `Subscribe` in order to install the operator. 
+
+![Install Knative Serving 3](./docs/images/knative-serving-install-3.png)
+
+After some minutes you'll see how the operator status moves from `1 Installing` to `1 Installed` as in the next pic.
+
+![Install Knative Serving 4](./docs/images/knative-serving-install-4.png)
 
 Check all is good.
 
@@ -830,9 +846,24 @@ webhook-798f4bc969-92mvs                     1/1     Running   0          41s
 ```
 
 ### Install Knative Eventing
-<Insert screenshots, done with the webconsole>
 
-> **Beware!** This could take 2 mins or so...
+In a similar fashion go to `Catalog->Operatorhub` and look for `knative` you should get results similar to these ones. Click on Knative Serving Operator.
+
+![Install Knative Eventing 1](./docs/images/knative-eventing-install-1.png)
+
+Now click on `Install` to install the Eventing part of Knative.
+
+![Install Knative Eventing 2](./docs/images/knative-eventing-install-2.png)
+
+As you see in the next picture this operator is installed cluster-wide. Click on `Subscribe` in order to install the operator. 
+
+![Install Knative Eventing 3](./docs/images/knative-eventing-install-3.png)
+
+After some minutes you'll see how the operator status moves from `1 Installing` to `1 Installed` as in the next pic.
+
+![Install Knative Eventing 4](./docs/images/knative-eventing-install-4.png)
+
+> **NOTE:** This could take 2 mins or so...
 
 Check all is good.
 
