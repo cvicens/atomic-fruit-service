@@ -902,6 +902,33 @@ Let's create a Knative service from the image we created previously.
 oc apply -n ${PROJECT_NAME} -f ./src/main/k8s/atomic-fruit-knative-service-v1.yaml
 ```
 
+```yaml
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: atomic-fruit-knative
+spec:
+  template:
+    metadata:
+      name: atomic-fruit-knative-v1
+      annotations:
+        # disable istio-proxy injection
+        sidecar.istio.io/inject: "false"
+        # Target 10 in-flight-requests per pod.
+        autoscaling.knative.dev/target: "10"
+    spec:
+      containers:
+      - #image: quay.io/cvicensa/atomic-fruit-service:1.0-SNAPSHOT
+        image: image-registry.openshift-image-registry.svc:5000/atomic-fruit/atomic-fruit-service:latest
+        livenessProbe:
+          httpGet:
+            path: /health
+        readinessProbe:
+          httpGet:
+            path: /health
+
+```
+
 Get the list of revisions
 
 ```sh
@@ -935,12 +962,47 @@ atomic-fruit-service-v1-deployment   0/1     1            0           22s
 ```
 
 ```sh
-export SVC_URL=`oc get rt atomic-fruit-service -o yaml | yq -r .status.url` && \
-> http $SVC_URL
+export SVC_URL=`oc get rt atomic-fruit-knative -o yaml | yq -r .status.url` && http "$SVC_URL/fruit/welcome"
+```
+
+Let's put our service under siege! c > 10 ==> scale up
+
+```sh
+siege -r 50 -c 25 "${SVC_URL}/fruit/Summer"
 ```
 
 Let's generate a second revision of the knative service `atomic-fruit-service`
 
 ```sh
 oc apply -n ${PROJECT_NAME} -f ./src/main/k8s/atomic-fruit-knative-service-v2.yaml
+```
+
+```yaml
+apiVersion: serving.knative.dev/v1alpha1
+kind: Service
+metadata:
+  name: atomic-fruit-knative
+spec:
+  template:
+    metadata:
+      name: atomic-fruit-knative-v2
+      annotations:
+        # disable istio-proxy injection
+        sidecar.istio.io/inject: "false"
+        # Target 10 in-flight-requests per pod.
+        autoscaling.knative.dev/target: "10"
+    spec:
+      containers:
+      - #image: quay.io/cvicensa/atomic-fruit-service:1.0-SNAPSHOT
+        image: image-registry.openshift-image-registry.svc:5000/atomic-fruit/atomic-fruit-service:latest
+        env:
+        - name: WELCOME_MESSAGE
+          value: Bienvenido
+        livenessProbe:
+          httpGet:
+            path: /health
+        readinessProbe:
+          httpGet:
+            path: /health
+
 ```

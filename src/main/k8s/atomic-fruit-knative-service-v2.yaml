@@ -9,6 +9,8 @@ spec:
       annotations:
         # disable istio-proxy injection
         sidecar.istio.io/inject: "false"
+        # Target 10 in-flight-requests per pod.
+        autoscaling.knative.dev/target: "10"
     spec:
       containers:
       - #image: quay.io/cvicensa/atomic-fruit-service:1.0-SNAPSHOT
