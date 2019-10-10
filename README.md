@@ -333,7 +333,7 @@ import org.jboss.logging.Logger;
 public class FruitResource {
     Logger logger = Logger.getLogger(FruitResource.class);
 
-    @ConfigProperty(name = "atomic-fruit.welcome", defaultValue = "Welcome")
+    @ConfigProperty(name = "atomic-fruit.welcome-message", defaultValue = "Welcome")
     String welcome;
     
     @GET
@@ -367,6 +367,12 @@ public class FruitResource {
         return Response.created(createdUri).build();
     }
 }
+```
+
+Add the following property to your application.properties right after `greetings.message = hello`
+
+```properties
+atomic-fruit.welcome-message = ${WELCOME_MESSAGE:Welcome}
 ```
 
 ## Adding datasource related properties
@@ -523,6 +529,8 @@ Change app repo and name
 Click on `Create and Open`
 
 ![Create Java 11 Maven Workspace](./docs/images/che-create-workspace-1.png)
+
+You can also click [here](https://che-crw.apps.cluster-kharon-688a.kharon-688a.open.redhat.com/f?url=https://github.com/cvicens/atomic-fruit-service) to automatically create a workspace with all you need.
 
 ## [OPTIONAL] Add `oc` CLI
 
@@ -888,12 +896,40 @@ oc adm policy add-scc-to-user anyuid -z default -n ${PROJECT_NAME}
 
 ## Deploy your app as Knative Service
 
-```sh
-oc apply -n ${PROJECT_NAME} -f ./src/main/k8s/atomic-fruit-knative-service.yaml
-```
+Let's create a Knative service from the image we created previously.
 
 ```sh
-oc get deployments -n ${PROJECT_NAME}
+oc apply -n ${PROJECT_NAME} -f ./src/main/k8s/atomic-fruit-knative-service-v1.yaml
+```
+
+Get the list of revisions
+
+```sh
+$ kn revision list
+NAME                      SERVICE                AGE    CONDITIONS   READY   REASON
+atomic-fruit-knative-v1   atomic-fruit-knative   3d1h   3 OK / 4     True  
+```
+
+Now get the list of Knative services
+
+```sh
+$ kn service list
+NAME                   URL                                                                                             GENERATION   AGE    CONDITIONS   READY   REASON
+atomic-fruit-knative   http://atomic-fruit-knative.atomic-fruit.apps.cluster-kharon-688a.kharon-688a.open.redhat.com   1            3d1h   3 OK / 3     True 
+```
+
+You can also get the list of routes.
+
+```ss
+$ kn route list
+NAME                   URL                                                                                             AGE    CONDITIONS   TRAFFIC
+atomic-fruit-knative   http://atomic-fruit-knative.atomic-fruit.apps.cluster-kharon-688a.kharon-688a.open.redhat.com   3d1h   3 OK / 3     100% -> atomic-fruit-knative-v1
+```
+
+Finally you can see that behind Knative there are k8s native objects such as `Deployments`.
+
+```sh
+$ oc get deployments -n ${PROJECT_NAME}
 NAME                                 READY   UP-TO-DATE   AVAILABLE   AGE
 atomic-fruit-service-v1-deployment   0/1     1            0           22s
 ```
@@ -901,4 +937,10 @@ atomic-fruit-service-v1-deployment   0/1     1            0           22s
 ```sh
 export SVC_URL=`oc get rt atomic-fruit-service -o yaml | yq -r .status.url` && \
 > http $SVC_URL
+```
+
+Let's generate a second revision of the knative service `atomic-fruit-service`
+
+```sh
+oc apply -n ${PROJECT_NAME} -f ./src/main/k8s/atomic-fruit-knative-service-v2.yaml
 ```

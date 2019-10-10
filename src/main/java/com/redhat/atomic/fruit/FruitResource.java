@@ -23,7 +23,7 @@ import org.jboss.logging.Logger;
 public class FruitResource {
     Logger logger = Logger.getLogger(FruitResource.class);
 
-    @ConfigProperty(name = "atomic-fruit.welcome", defaultValue = "Welcome")
+    @ConfigProperty(name = "atomic-fruit.welcome-message", defaultValue = "Welcome")
     String welcome;
     
     @GET

@@ -1,0 +1,18 @@
+apiVersion: tekton.dev/v1alpha1
+kind: PipelineRun
+metadata:
+  labels:
+    tekton.dev/pipeline: atomic-fruit-service-build-pipeline
+  name: atomic-fruit-service-build-pipeline-run
+spec:
+  params:
+  pipelineRef:
+    name: atomic-fruit-service-build-pipeline
+  resources:
+  - name: app-git
+    resourceRef:
+      name: atomic-fruit-service-git
+  - name: app-image
+    resourceRef:
+      name: atomic-fruit-service-image
+  serviceAccount: pipeline
