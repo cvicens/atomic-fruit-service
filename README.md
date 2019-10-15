@@ -442,6 +442,48 @@ curl http://localhost:8080/fruit
 
 You can stop the app with Ctrl+C
 
+### Little diversion: Using H2
+
+What if you wanted to use H2, the embedded database when in `dev` mode?
+
+First let's add the extension.
+
+> Adding H2
+
+```sh
+./mvnw quarkus:add-extension -Dextension="io.quarkus:quarkus-jdbc-h2"
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] ------------< com.redhat.atomic.fruit:atomic-fruit-service >------------
+[INFO] Building atomic-fruit-service 1.0-SNAPSHOT
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- quarkus-maven-plugin:0.23.1:add-extension (default-cli) @ atomic-fruit-service ---
+✅ Adding dependency io.quarkus:quarkus-jdbc-h2:jar
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  1.606 s
+[INFO] Finished at: 2019-10-13T15:37:52+02:00
+[INFO] ------------------------------------------------------------------------
+```
+
+Second change some datasource related properties in `application.properties`
+
+> **Notice** we have change the value of `dev.quarkus.datasource.url` now the url points to H2 instead of PostgreSQL, so no need to port-forward our DB running in our cluster.
+
+```
+#%dev.quarkus.datasource.url = jdbc:postgresql://127.0.0.1:5432/my_data
+%dev.quarkus.datasource.url=jdbc:h2:mem:myDB
+%dev.quarkus.datasource.driver=org.h2.Driver
+%dev.quarkus.datasource.username=username-default
+```
+In your current terminal you can run your code using profile `dev`, this time against H2.
+
+```sh
+./mvnw compile quarkus:dev
+```
+
 ## Test creating a fruit
 
 Let's try to create a Fruit object in our database.
