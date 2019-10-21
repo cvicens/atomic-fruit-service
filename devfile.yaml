@@ -1,56 +1,41 @@
-apiVersion: 1.0.0
 metadata:
   name: atomic-fruit-service
 projects:
-  - source:
-      location: 'https://github.com/cvicens/atomic-fruit-service.git'
+  - name: atomic-fruit-service
+    source:
+      location: 'https://github.com/cvicens/atomic-fruit-service'
       type: git
-    name: atomic-fruit-service
+      branch: master
 components:
-  - args: []
-    env: []
-    selector: {}
-    entrypoints: []
-    endpoints: []
-    command: []
-    volumes: []
-    preferences: {}
-    id: redhat/java/latest
+  - id: redhat/java11/latest
     type: chePlugin
-  - args: []
+  - mountSources: true
+    memoryLimit: 512Mi
+    type: dockerimage
+    volumes:
+      - name: m2
+        containerPath: /home/user/.m2
+    alias: maven
+    image: 'quay.io/eclipse/che-java11-maven:7.3.0'
     env:
-      - name: MAVEN_CONFIG
-        value: /home/user/.m2
-      - name: MAVEN_OPTS
-        value: >-
+      - value: /home/user/.m2
+        name: MAVEN_CONFIG
+      - value: >-
           -XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
           -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
           -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true
           -Xms20m -Djava.security.egd=file:/dev/./urandom -Duser.home=/home/user
-      - name: JAVA_OPTS
-        value: >-
+        name: MAVEN_OPTS
+      - value: >-
           -XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
           -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
           -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true
           -Xms20m -Djava.security.egd=file:/dev/./urandom
-      - name: JAVA_TOOL_OPTIONS
-        value: >-
+        name: JAVA_OPTS
+      - value: >-
           -XX:MaxRAMPercentage=50 -XX:+UseParallelGC -XX:MinHeapFreeRatio=10
           -XX:MaxHeapFreeRatio=20 -XX:GCTimeRatio=4
           -XX:AdaptiveSizePolicyWeight=90 -Dsun.zip.disableMemoryMapping=true
           -Xms20m -Djava.security.egd=file:/dev/./urandom
-    selector: {}
-    mountSources: true
-    image: 'quay.io/eclipse/che-java11-maven:7.2.0'
-    entrypoints: []
-    endpoints: []
-    command: []
-    alias: maven
-    memoryLimit: 512Mi
-    volumes:
-      - containerPath: /home/user/.m2
-        name: m2
-    preferences: {}
-    type: dockerimage
-
-attributes: {}
+        name: JAVA_TOOL_OPTIONS
+apiVersion: 1.0.0
