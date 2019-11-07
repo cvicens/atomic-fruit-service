@@ -20,6 +20,8 @@ components:
     alias: maven
     image: 'quay.io/cvicensa/cnw-che-stack:7.3.1'
     env:
+      - value: http://nexus.lab-infra:8081/repository/maven-all-public
+        name: MAVEN_MIRROR_URL
       - value: /home/user/.m2
         name: MAVEN_CONFIG
       - value: >-
