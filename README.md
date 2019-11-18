@@ -136,7 +136,7 @@ Ctrl+C to stop.
 This mode generates a Quarkus native binary file using an image and builds an image with it.
 
 ```sh
-./mvnw package -DskipTests -Pnative -Dnative-image.docker-build=true
+./mvnw package -DskipTests -Pnative -Dnative-image.container-build=true
 docker build -f src/main/docker/Dockerfile.native -t atomic-fruit-service:1.0-SNAPSHOT .
 ```
 
