@@ -18,9 +18,9 @@ This is sample Fruit service generated from a maven artifact that generates all 
 export PROJECT_NAME="atomic-fruit"
 export APP_NAME="fruits-app"
 
-export QUARKUS_VERSION="1.5.0.Final"
+export QUARKUS_VERSION="1.8.1.Final"
 
-export GRAALVM_VERSION="19.3.1"
+export GRAALVM_VERSION="20.2.0"
 GRAALVM_HOME=$(pwd)/graalvm-ce-java11-${GRAALVM_VERSION}
 if [[ "$OSTYPE" == "darwin"* ]]; then GRAALVM_HOME=${GRAALVM_HOME}/Contents/Home ; fi
 export GRAALVM_HOME
@@ -30,12 +30,12 @@ if [[ "$OSTYPE" == "linux"* ]]; then GRAALVM_OSTYPE=linux ; fi
 if [[ "$OSTYPE" == "darwin"* ]]; then GRAALVM_OSTYPE=darwin ; fi
 export GRAALVM_OSTYPE
 
-export KNATIVE_CLI_VERSION="0.14.0"
+export KNATIVE_CLI_VERSION="0.17.0"
 if [[ "$OSTYPE" == "linux"* ]]; then KNATIVE_OSTYPE=Linux ; fi
 if [[ "$OSTYPE" == "darwin"* ]]; then KNATIVE_OSTYPE=Darwin ; fi
 export KNATIVE_OSTYPE
 
-export TEKTON_CLI_VERSION="0.9.0"
+export TEKTON_CLI_VERSION="0.13.0"
 if [[ "$OSTYPE" == "linux"* ]]; then TEKTON_OSTYPE=Linux ; fi
 if [[ "$OSTYPE" == "darwin"* ]]; then TEKTON_OSTYPE=Darwin ; fi
 export TEKTON_OSTYPE
@@ -140,9 +140,14 @@ Ctrl+C to stop.
 
 This mode generates a Quarkus native binary file using an image and builds an image with it.
 
+> **NOTE:** If you want to use Mandrel...
+> 
+> ```
+> ./mvnw package -Pnative -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel:{mandrel-flavor}
+> ```
+
 ```sh
 ./mvnw package -DskipTests -Pnative -Dquarkus.native.container-build=true
-
 docker build -f src/main/docker/Dockerfile.native -t atomic-fruit-service:1.0-SNAPSHOT .
 ```
 
@@ -166,6 +171,53 @@ Push it to the image registry of your choice.
 docker tag atomic-fruit-service:1.0-SNAPSHOT quay.io/<quay_user>/atomic-fruit-service:1.0-SNAPSHOT
 docker push quay.io/<quay_user>/atomic-fruit-service:1.0-SNAPSHOT
 ```
+
+# [OPTIONAL] Docker-Native Mode 1 step
+
+> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image)
+
+```
+./mvnw quarkus:add-extension -Dextensions="container-image-docker"
+./mvnw package -Pnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
+```
+
+Run the image created.
+
+```sh
+docker run -i --rm -p 8080:8080 atomic-fruit-service:1.0-SNAPSHOT
+```
+
+Test from another terminal or a browser, you should receive a `hello` string.
+
+```sh
+curl http://localhost:8080/fruit
+```
+
+Ctrl+C to stop.
+
+
+# [OPTIONAL] Docker-JVM Mode 1 step
+
+> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image)
+
+```
+./mvnw quarkus:add-extension -Dextensions="container-image-docker"
+./mvnw package -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
+```
+
+Run the image created.
+
+```sh
+docker run -i --rm -p 8080:8080 atomic-fruit-service:1.0-SNAPSHOT
+```
+
+Test from another terminal or a browser, you should receive a `hello` string.
+
+```sh
+curl http://localhost:8080/fruit
+```
+
+Ctrl+C to stop.
 
 # Adding log capabilities
 
@@ -211,14 +263,14 @@ import org.eclipse.microprofile.config.inject.ConfigProperty;
 @Path("/fruit")
 public class FruitResource {
 
-  @ConfigProperty(name = "greetings.message")
+  @ConfigProperty(name = "hello.message")
   String message;
-  ...
+  
   @GET
   @Produces(MediaType.TEXT_PLAIN)
   public String hello() {
-      logger.debug("Hello method is called with message: " + this.message); // logging
-      return message;
+      logger.debug("Hello method is called with message: " + this.message); // logging & custom property
+      return message; // custom property
   }
 ...
 }
@@ -228,7 +280,7 @@ Add the following property to your application.properties.
 
 ```properties
 # custom properties
-greetings.message = hello
+hello.message = ${HELLO_MESSAGE:hello}
 ```
 
 # Running in development mode and enjoy hot reloading
@@ -243,9 +295,9 @@ We can run our app in development mode, to do so we have to do as follows:
 
 As we have done several times before, from a different terminal or using a browser try this url: http://localhost:8080/fruit
 
-Now, without stopping our application, change the value of `greetings.message` from hello to something different. Save the aplication.propertlies file and try again. This time the result should be different.
+Now, without stopping our application, change the value of `hello.message` from hello to something different. Save the aplication.propertlies file and try again. This time the result should be different.
 
-Return the value of `greetings.message` back to `hello` and stop the app with Ctrl+C
+**WARNING:** Return the value of `hello.message` back to `hello` and stop the app with Ctrl+C
 
 # Adding a Data Base to our application
 
@@ -253,12 +305,26 @@ Return the value of `greetings.message` back to `hello` and stop the app with Ct
 
 We're going to deploy PostgreSQL using a template, in general an operator is a better choice but for the sake of simplicity in this demo a template is a good choice.
 
+Using `kubectl`
+
 ```sh
+kubectl create ns ${PROJECT_NAME}
+kubectl create deployment my-database --image=registry.access.redhat.com/rhscl/postgresql-10-rhel7:latest -n ${PROJECT_NAME}
+kubectl set env deployment/my-database POSTGRESQL_USER=luke POSTGRESQL_PASSWORD=secret POSTGRESQL_DATABASE=my_data -n ${PROJECT_NAME}
+kubectl expose deployment my-database --port=5432 --target-port=5432
+```
 
-oc new-app -e POSTGRESQL_USER=luke -e POSTGRESQL_PASSWORD=secret -e POSTGRESQL_DATABASE=my_data centos/postgresql-10-centos7 --name=fruits-database -n ${PROJECT_NAME}
+Using `oc`
 
-oc label dc/fruits-database app.openshift.io/runtime=postgresql --overwrite -n ${PROJECT_NAME} && \
-oc label dc/fruits-database app.kubernetes.io/part-of=${APP_NAME} --overwrite -n ${PROJECT_NAME}
+```sh
+oc new-app -e POSTGRESQL_USER=luke -e POSTGRESQL_PASSWORD=secret -e POSTGRESQL_DATABASE=my_data centos/postgresql-10-centos7 --name=my-database -n ${PROJECT_NAME}
+```
+
+Some labeling specially useful for OpenShift developer view.
+
+```sh
+kubectl label deployment/my-database app.openshift.io/runtime=postgresql --overwrite -n ${PROJECT_NAME} && \
+kubectl label deployment/my-database app.kubernetes.io/part-of=${APP_NAME} --overwrite -n ${PROJECT_NAME}
 ```
 
 ## Adding DB related extensions
@@ -311,7 +377,7 @@ As you can see our `Fruit` class extends `PanacheEntity` which adds the default 
 
 ## Let's CRUDify our REST enabled service class FruitResource
 
-What we want is easy:
+What we want to do is easy:
 
 * Return all the fruit if **GET** `/fruit`
 * Save a Fruit if **POST** `/fruit`
@@ -343,15 +409,15 @@ import org.jboss.logging.Logger;
 public class FruitResource {
     Logger logger = Logger.getLogger(FruitResource.class);
 
-    @ConfigProperty(name = "atomic-fruit.welcome-message", defaultValue = "Welcome")
-    String welcome;
-
+    @ConfigProperty(name = "hello.message")
+    String message;
+    
     @GET
-    @Path("welcome")
+    @Path("hello")
     @Produces(MediaType.TEXT_PLAIN)
-    public String welcome() {
-        logger.debug("welcome method is called");
-        return welcome;
+    public String hello() {
+        logger.debug("Hello method is called with message: " + this.message); // logging & custom property
+        return message; // custom property
     }
     
     @GET
@@ -379,12 +445,6 @@ public class FruitResource {
 }
 ```
 
-Add the following property to your application.properties right after `greetings.message = hello`
-
-```properties
-atomic-fruit.welcome-message = ${WELCOME_MESSAGE:Welcome}
-```
-
 We need to adapt the test class after the changes to `FruitResource`. Update `$PROJECT_HOME/src/test/java/com/redhat/atomic/fruit/FruitResourceTest.java` with the next code.
 
 ```java
@@ -402,10 +462,10 @@ public class FruitResourceTest {
     @Test
     public void testHelloEndpoint() {
         given()
-          .when().get("/fruit/welcome")
+          .when().get("/fruit/hello")
           .then()
              .statusCode(200)
-             .body(is("Welcome"));
+             .body(is("hello"));
     }
 
 }
@@ -419,9 +479,15 @@ Add the following properties to your `./src/main/resources/application.propertie
 
 ```properties
 # Data Base related properties
-quarkus.datasource.url = jdbc:postgresql://fruits-database:5432/my_data
-%che.quarkus.datasource.url = jdbc:postgresql://fruits-database.atomic-fruit:5432/my_data
-%dev.quarkus.datasource.url = jdbc:postgresql://127.0.0.1:5432/my_data
+quarkus.datasource.url = jdbc:postgresql://my-database:5432/my_data
+%che.quarkus.datasource.url = jdbc:postgresql://my-database.atomic-fruit:5432/my_data
+#%dev.quarkus.datasource.url = jdbc:postgresql://127.0.0.1:5432/my_data
+%dev.quarkus.datasource.url = jdbc:h2:mem:myDB
+%dev.quarkus.datasource.driver = org.h2.Driver
+%dev.quarkus.datasource.username = username-default
+%test.quarkus.datasource.url = jdbc:h2:mem:myDB
+%test.quarkus.datasource.driver =org.h2.Driver
+%test.quarkus.datasource.username = username-default
 quarkus.datasource.driver = org.postgresql.Driver
 quarkus.hibernate-orm.dialect = org.hibernate.dialect.PostgreSQL95Dialect
 quarkus.datasource.username = luke
@@ -429,6 +495,8 @@ quarkus.datasource.password = secret
 
 # drop and create the database at startup (use `update` to only update the schema)
 %dev.quarkus.hibernate-orm.database.generation = drop-and-create
+quarkus.hibernate-orm.database.generation = create
+quarkus.hibernate-orm.sql-load-script = import.sql
 # show sql statements in log
 quarkus.hibernate-orm.log.sql = true
 ```
@@ -455,10 +523,12 @@ INSERT INTO Fruit(id,name,season) VALUES ( nextval ('hibernate_sequence') , 'Gra
 
 In a different terminal...
 
-> **NOTE:** You may need to set the default project to ${PROJECT_NAME}: `oc project ${PROJECT_NAME}` if that's the case remember it was set at the begining of this guide.
+> **NOTE 1:** Load environment as we did before `. ./env.sh` or just substitute `PROJECT_NAME` accordingly
+> **NOTE 2:** If using `oc` you may want to set the default project to ${PROJECT_NAME}: `oc project ${PROJECT_NAME}`
 
 ```sh
-oc port-forward svc/fruits-database 5432
+POD_NAME=$(kubectl get pod -n ${PROJECT_NAME} -o jsonpath='{.items[0].metadata.name}')
+kubectl port-forward ${POD_NAME} 5432
 ```
 
 In your current terminal run your code using profile `dev`
@@ -478,7 +548,9 @@ curl http://localhost:8080/fruit
 [{"id":1,"name":"Mango","season":"Spring"},{"id":2,"name":"Strawberry","season":"Spring"},{"id":3,"name":"Orange","season":"Winter"},{"id":4,"name":"GrapeFruit","season":"Winter"},{"id":5,"name":"Blueberry","season":"Summer"},{"id":6,"name":"Banana","season":"Summer"},{"id":7,"name":"Plum","season":"Summer"},{"id":8,"name":"Apple","season":"Fall"},{"id":9,"name":"Grape ","season":"Fall"}]
 ```
 
-You can stop the app with Ctrl+C
+We're done with the PostgreSQL tests, now go to the terminal window where we forwaded the database port and stop it with Ctrl+C
+
+Leave the application running we're going to do some more changes.
 
 ### Little diversion: Using H2
 
@@ -506,9 +578,9 @@ First let's add the extension.
 [INFO] ------------------------------------------------------------------------
 ```
 
-Second change some datasource related properties in `application.properties`
+Second, change some datasource related properties in `application.properties`
 
-> **Notice** we have change the value of `dev.quarkus.datasource.url` now the url points to H2 instead of PostgreSQL, so no need to port-forward our DB running in our cluster.
+> **Notice** that we have changed the value of `dev.quarkus.datasource.url` now the url points to H2 instead of PostgreSQL, so no need to port-forward our DB running in our cluster.
 
 ```
 #%dev.quarkus.datasource.url = jdbc:postgresql://127.0.0.1:5432/my_data
@@ -516,10 +588,18 @@ Second change some datasource related properties in `application.properties`
 %dev.quarkus.datasource.driver=org.h2.Driver
 %dev.quarkus.datasource.username=username-default
 ```
-In your current terminal you can run your code using profile `dev`, this time against H2.
+
+If, accidentally, you stopped the application you can run it again using profile `dev` running the next command. However this time the application will run queries against H2.
 
 ```sh
 ./mvnw compile quarkus:dev
+```
+
+As we have done before, from another terminal run:
+
+```sh
+curl http://localhost:8080/fruit
+[{"id":1,"name":"Mango","season":"Spring"},{"id":2,"name":"Strawberry","season":"Spring"},{"id":3,"name":"Orange","season":"Winter"},{"id":4,"name":"GrapeFruit","season":"Winter"},{"id":5,"name":"Blueberry","season":"Summer"},{"id":6,"name":"Banana","season":"Summer"},{"id":7,"name":"Plum","season":"Summer"},{"id":8,"name":"Apple","season":"Fall"},{"id":9,"name":"Grape ","season":"Fall"}]
 ```
 
 ## Test creating a fruit
@@ -552,7 +632,7 @@ curl: (6) Could not resolve host: POST
 
 ## Adding Swagger UI to ease API development and testing
 
-You can easily generate en OpenAPI compliant description of your API and at additionally add a Swagger UI to your app by adding the `openapi` extension as follows.
+You can easily generate en OpenAPI compliant description of your API and at additionally add a Swagger UI to your app by adding the `openapi` extension. Please run this command to do so.
 
 ```sh
 ./mvnw quarkus:add-extension -Dextensions="quarkus-smallrye-openapi"
@@ -583,10 +663,10 @@ Now click on **Execute** eventually you should get a result similar to this one.
 Health checks is one of those things that if recommendable in general is a must for every Cloud Native App and in quarkus it's a extension so let's add it.
 
 ```sh
-./mvnw quarkus:add-extension -Dextension="health"
+./mvnw quarkus:add-extension -Dextension="smallrye-health"
 ```
 
-Run in `dev` mode, for instace and then test the `/health` endpoint like this:
+Make sure your application is running in `dev` mode, then test the `/health` endpoint like this:
 
 ```sh
 curl http://localhost:8080/health
@@ -594,158 +674,270 @@ curl http://localhost:8080/health
 {
     "status": "UP",
     "checks": [
+        {
+            "name": "Database connections health check",
+            "status": "UP"
+        }
     ]
 }
 ```
 
-# Moving to Eclipse Che
-
-## Create a Workspace
-
-Select Stack `Java 11 Maven`
-
-Change app repo and name
-
-Click on `Create and Open`
-
-![Create Java 11 Maven Workspace](./docs/images/che-create-workspace-1.png)
-
-You can also click [here](https://che-crw.apps.cluster-kharon-688a.kharon-688a.open.redhat.com/f?url=https://github.com/cvicens/atomic-fruit-service) to automatically create a workspace with all you need.
-
-## [OPTIONAL] Add `oc` CLI
-
-Open a terminal to container `maven`
-
-Create a `bin` dir in `${CHE_PROJECTS_ROOT}` (default dir).
-
-```sh
-mkdir ${CHE_PROJECTS_ROOT}/bin
-export PATH=${CHE_PROJECTS_ROOT}/bin:$PATH
-curl -OL https://mirror.openshift.com/pub/openshift-v4/clients/ocp/4.1.14/openshift-client-linux-4.1.14.tar.gz
-tar xvzf openshift-client-linux-4.1.14.tar.gz -C ${CHE_PROJECTS_ROOT}/bin oc
-oc version
-rm openshift-client-linux-4.1.14.tar.gz
-```
-
-## Run our app in `dev` mode but using our custom profile `che`
-
-Open a terminal to container `maven` if not already done. It's two step action, first go to `Terminal`->`Open Terminal in specific container`.
-
-![Open Terminal in Che 1](./docs/images/open-terminal-che-1.png)
-
-Then select the container, in our case `maven`.
-
-![Open Terminal in Che 1](./docs/images/open-terminal-che-2.png)
-
-Finally be sure you're inside our project folder, if you followed intructions to the letter `${CHE_PROJECTS_ROOT}/atomic-fruit-service`.
-
-> **WARNING:** If you experience this error just use `mvn` instead of `./mvnw`
-> 
-> ```sh
-> [ERROR] Unknown lifecycle phase "/home/user/.m2". ...
-> ```
->
-
-```sh
-mvn compile quarkus:dev -Dquarkus.profile=che
-```
-
-If everything is fine you should get no errors and receive a couple of notifications as in the next pic.
-
-![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-1.png)
-
-One of the notifications is related to the debugging port `5005` the other to the port where our app is listening inside the container `8080`. Let's concentrate on the latter, if you click `yes` this port (internal so far) will be exposed so that we can send request from the internet, please do so.
-
-![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-2.png)
-
-Now we you should have received another notification related to the same port, this time announcing that the redirection is in place. Click on `Open Link` this will open an internal browser window to our app default web page.
-
-![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-3.png)
-
-Click on the upper right corner icon so that you can open the link in a new tab, then add `/swagger-ui`  to the url and as we did before test the API.
-
-![Open Terminal in Che 1](./docs/images/run-dev-mode-in-che-4.png)
-
-> ***Did you notice*** that you didn't need to use `port-forward` and everything worked properly. This is because the `che` profile points to the dabase using a the DNS name of the database including the namespace where it is running into.
->
-> **WARNING:** Of course if you have deployed the database in a different namespace you should modify property `%che.quarkus.datasource.url` accordingly.
-
-```properties
-%che.quarkus.datasource.url = jdbc:postgresql://my-database.atomic-fruit:5432/my_data
-```
-
-## Sync local folder with remote folder in a CHE workspace
-
-This is just an example call to the `sync-workspace.sh` script.
-
-```sh
-./sync-workspace.sh crw atomic-fruit-service apps.cluster-kharon-688a.kharon-688a.open.redhat.com
-```
+Ctrl+C
 
 # Different deployment techniques
 
-## Deploying to OpenShift directly
+## Deploying to Kubernetes
 
-First of all let's add the extension to deploy to openshift.
+First of all let's add the extension to deploy to kubernetes.
 
 ```sh
-./mvnw quarkus:add-extension -Dextension="openshift"
+./mvnw quarkus:add-extension -Dextension="kubernetes, jib"
 ```
 
-Add some labels to the deployment, open `./src/main/resources/application.properties` and add:
-
-> **NOTE 1:** Label `openshift.part-of` should have the value you decided for ${APP_NAME}, change the next example accordingly.
-
-> **NOTE 2:** Label `quarkus.kubernetes-client.trust-certs` should be set to `true` ONLY if your API Server Certificate is sef-signed.
+Add this couple of properties to `application.properties` so that we trust on the CA cert and set the namespace where we want to deploy our application.
 
 ```properties
-# OpenShift Deployment
-quarkus.s2i.base-jvm-image=fabric8/s2i-java:3.1-java11
+# Kubernetes Client
 quarkus.kubernetes-client.trust-certs=true
-quarkus.openshift.expose=true
-quarkus.openshift.part-of=fruits-app
-quarkus.openshift.labels.app.openshift.io/runtime=quarkus
-quarkus.openshift.annotations."app.openshift.io/connects-to"=fruits-database
+quarkus.kubernetes-client.namespace=${PROJECT_NAME:atomic-fruit}
 ```
 
-Next let's trigger a build in OpenShift using S2I.
+Additionally, we want to use `jib` to build the image so it's better to specifically set this up as follows. Otherwise if you had installed other `container-image-*` extension you would get this error.
 
-> **WARNING:** Make sure that the default project is set to ${PROJECT_NAME}
+> ERROR:
 >
+> ```sh
+> [error]: Build step io.quarkus.container.image.deployment.ContainerProcessor#publishImageInfo threw an exception: java.lang IllegalStateException: quarkus-container-image-jib and quarkus-container-image-docker were detected, at most one container-image extension can be present.
 > ```
-> $ echo "$(oc project -q) === ${PROJECT_NAME}"
-> atomic-fruit === atomic-fruit
-> ```
+>
+
+Add this property to the `application.properties` file.
+
+```properties
+# Choose your building extension
+quarkus.container-image.builder=jib
+```
+
+Let's package our application and have a look to the kuberenetes descriptors generated.
+
+```
+./mvnw package
+```
+
+Go to [`./target/kubernetes/kubernetes.yml`](./target/kubernetes/kubernetes.yml) there you'll find three objects: ServiceAccoount, Service and Deployment. Focus on the Deployment object, pay attention to the `spec/template/spec/containers[0]/image` it points to `<YOUR-DOCKER-USER>/atomic-fruit-service:1.0-SNAPSHOT`, right? You can change this and point to the registry you pushed your image to, `quai.io` in my case, and the registry user you want to use, `cvicens` in this case.
+
+```properties
+# OCI Image
+quarkus.container-image.registry=quay.io
+quarkus.container-image.group=cvicens
+```
+
+There're other properties you can use if necessary:
+
+```properties
+quarkus.container-image.group=user    #optional, default to the system user name
+quarkus.container-image.name=demo-app #optional, defaults to the application name
+quarkus.container-image.tag=1.0       #optional, defaults to the application version
+```
+
+The generated manifests use the Kubernetes recommended labels. These labels can be customized using quarkus.kubernetes.name, quarkus.kubernetes.version and quarkus.kubernetes.part-of. For example by adding the following configuration to your application.properties:
+
+```properties
+quarkus.kubernetes.part-of=todo-app
+quarkus.kubernetes.name=todo-rest
+quarkus.kubernetes.version=1.0-rc.1
+```
+
+As is described in detail in the OpenShift section, customizing OpenShift (or Knative) properties is done in the same way, but replacing kubernetes with openshift (or knative). The previous example for OpenShift would look like this:
+
+```properties
+quarkus.openshift.part-of=todo-app
+quarkus.openshift.name=todo-rest
+quarkus.openshift.version=1.0-rc.1
+```
+
+Let's add a some additional labels `part-of` and `name`, and a custom label:
+
+```properties
+quarkus.kubernetes.part-of=fruits-app
+quarkus.kubernetes.name=quarkus
+quarkus.kubernetes.labels.foo=bar
+```
+
+> **NOTE:**
+> When using the quarkus-container-image-jib extension to build a container image, then any label added via the aforementioned property will also be added to the generated container image.
+
+Regarding annotations, out of the box, the generated resources will be annotated with version control related information that can be used either by tooling, or by the user for troubleshooting purposes.
+
+```yaml
+annotations:
+  app.quarkus.io/vcs-url: "<some url>"
+  app.quarkus.io/commit-id: "<some git SHA>"
+```
+
+Let's add a custom annotation:
+
+```properties
+quarkus.kubernetes.annotations.foo=bar
+quarkus.kubernetes.annotations."app.quarkus/id"=42
+```
+
+Now let's add the environment variables we need to connect to the database:
+
+```properties
+# Environment variables
+quarkus.kubernetes.env.vars.DB_USERNAME=luke
+quarkus.kubernetes.env.vars.DB_PASSWORD=secret
+```
+
+Let's add a custom resource, an ingress rule, that points and should expose the Service generated for our Deployment.
 
 ```sh
-./mvnw clean package -Dquarkus.container-image.build=true
+cat << EOF > ./src/main/kubernetes/kubernetes.yml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: atomic-fruit-service
+spec:
+  rules:
+    - host: fruits.minikube.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              serviceName: atomic-fruit-service
+              servicePort: 8080
+EOF
 ```
 
-Finally it's time to deploy our application once we have built the image. To trigger a deployment:
+Install (enable if you prefer) nginx ingress controller in minikube.
+
+```sh
+minikube addons enable ingress
+```
+
+Let's generate the kubernetes descriptors and have a look to all the changes added.
+
+```sh
+./mvnw clean package
+```
+
+Let's deploy the result.
+
+```sh
+./mvnw clean package -Dquarkus.kubernetes.deploy=true
+```
+
+Or
+
+```sh
+$ kubectl apply -n ${PROJECT_NAME} -f target/kubernetes/kubernetes.yml
+```
+
+Let's inspect the resources created.
+
+```sh
+$ kubectl get deploy
+NAME                   READY   UP-TO-DATE   AVAILABLE   AGE
+atomic-fruit-service   1/1     1            1           73s
+my-database            1/1     1            1           89m
+```
+
+```sh
+$ kubectl get ingress -n $PROJECT_NAME 
+NAME                   CLASS    HOSTS                   ADDRESS         PORTS   AGE
+atomic-fruit-service   <none>   fruits.minikube.local   192.168.64.12   80      39s
+```
+
+Get the IP of your minikube cluster.
+
+```sh
+$ minikube ip
+192.168.64.12
+```
+
+And update your hosts file accordingly.
+
+```
+192.168.64.12   fruits.minikube.local
+```
+
+Now we can test that everything works properly.
+
+```sh
+curl http://fruits.minikube.local/fruit
+```
+
+## Deploying to OpenShift
+
+Let's add the `openshift` extension, it also adds the `s2i` build extension
+
+```sh
+ ./mvnw quarkus:add-extension -Dextensions="openshift"
+```
+
+Add these properties to select OpenShift as target, expose the application using a route and add an annotation to `connect` the application to the database.
+
+```
+# OpenShift Deployment
+quarkus.kubernetes.deployment-target=openshift
+quarkus.openshift.expose=true
+quarkus.openshift.labels.app.openshift.io/runtime=quarkus
+quarkus.openshift.annotations."app.openshift.io/connects-to"=my-database
+```
+
+Additionally let's select `s2i` as the image builder option. This way you'll be leveraging binary source to image (`s2i`).
+
+> **NOTE:** Should you want to select a different s2i base image you can do it using this property `quarkus.s2i.base-jvm-image=fabric8/s2i-java:3.1-java11`
+
+```properties
+# Choose your building extension
+quarkus.container-image.builder=s2i
+```
+
+Let's deploy our application on OpenShift. Don't forget to log in to your OpenShift cluster first!
 
 ```sh
 ./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true
 ```
 
-## Local native compilation and S2I binary build 
+### Local native compilation and S2I binary build 
 
 In this case we create a binary BuildConfig, compile the to native Linux x64 and start a build with that file.
 
-```sh
-oc new-build quay.io/quarkus/ubi-quarkus-native-binary-s2i:1.0 --binary --name=atomic-fruit-service-native-bin -l app=atomic-fruit-service-native-bin
-./mvnw clean package -DskipTests -Pnative -Dquarkus.native.container-build=true
-oc start-build atomic-fruit-service-native-bin --from-file=./target/atomic-fruit-service-1.0-SNAPSHOT-runner --follow
-oc new-app atomic-fruit-service-native-bin --name atomic-fruit-service-native-bin
-oc expose svc/atomic-fruit-service-native-bin
+> **NOTE:** For this to work you should be runnint Linux on your laptop... otherwise the local native executable file won't work in the linux image ;-)
 
-oc label dc/atomic-fruit-service-native-bin app.openshift.io/runtime=quarkus --overwrite -n ${PROJECT_NAME}
-oc label dc/atomic-fruit-service-native-bin app.kubernetes.io/part-of=${APP_NAME} --overwrite -n ${PROJECT_NAME}
-oc annotate dc/atomic-fruit-service-native-bin app.openshift.io/connects-to=fruits-database --overwrite -n ${PROJECT_NAME}
+```sh
+./mvnw clean package -DskipTests -Dquarkus.kubernetes.deploy=true -Pnative
 ```
 
-# Using S2I (Source to Image) to create an image for our app
+Another... more manual way to do the same this time using a container for building the native version.
 
-## [OPTIONAL] Building an image locally using S2I
+```sh
+oc new-project ${PROJECT_NAME}-native
+
+oc new-app -e POSTGRESQL_USER=luke -e POSTGRESQL_PASSWORD=secret -e POSTGRESQL_DATABASE=my_data centos/postgresql-10-centos7 --name=my-database -n ${PROJECT_NAME}-native
+
+kubectl label deployment/my-database app.openshift.io/runtime=postgresql --overwrite -n ${PROJECT_NAME}-native && \
+kubectl label deployment/my-database app.kubernetes.io/part-of=${APP_NAME} --overwrite -n ${PROJECT_NAME}-native
+
+oc new-build quay.io/quarkus/ubi-quarkus-native-binary-s2i:1.0 --binary --name=atomic-fruit-service-native-bin -l app=atomic-fruit-service-native-bin -n ${PROJECT_NAME}-native
+./mvnw package -DskipTests -Pnative -Dquarkus.native.container-build=true
+oc start-build atomic-fruit-service-native-bin --from-file=./target/atomic-fruit-service-1.0-SNAPSHOT-runner --follow -n ${PROJECT_NAME}-native
+oc new-app atomic-fruit-service-native-bin --name atomic-fruit-service-native-bin -n ${PROJECT_NAME}-native
+oc expose svc/atomic-fruit-service-native-bin -n ${PROJECT_NAME}-native
+
+oc label deployment/atomic-fruit-service-native-bin app.openshift.io/runtime=quarkus --overwrite -n ${PROJECT_NAME}-native
+oc label deployment/atomic-fruit-service-native-bin app.kubernetes.io/part-of=${APP_NAME} --overwrite -n ${PROJECT_NAME}-native
+oc annotate deployment/atomic-fruit-service-native-bin app.openshift.io/connects-to=my-database --overwrite -n ${PROJECT_NAME}-native
+```
+
+### Building an image starting with a git repo using S2I
+
+So this time instead of a binary file we will instruct S2I to build an image starting from the source code.
+
+#### [OPTIONAL] Building an image locally using S2I
 
 > **This step is optional and requires you have installed `s2i`**, you can find he binary [here](https://github.com/openshift/source-to-image/releases).
 
@@ -771,18 +963,18 @@ Now you can run the image locally with:
 $ docker run -it --rm -p 8080 atomic-fruit-service ${ENTRYPOINT}
 ```
 
-## Building using S2I on Openshift
+#### Building the same image using S2I on Openshift
 
 But the truth is that you don't need to tun `s2i` locally... you would usually use S2I on Openshift. As follows:
 
-> **NOTE:** Creating a Quarkus native binary requires some memory, maybe you need to either adapt your LimitRange (if there's any) or simply delete it (if this is suitable in your case) as in here: `oc delete limitrange --all -n ${PROJECT_NAME}`
+> **NOTE:** Creating a Quarkus native binary requires some memory, maybe you need to either adapt your LimitRange (if there's any) or simply delete it (if this is suitable in your case) as in here: `oc delete limitrange --all -n ${PROJECT_NAME}-native`
 
 ```sh
-oc new-app quay.io/quarkus/ubi-quarkus-native-s2i:${GRAALVM_VERSION}-java11~https://github.com/cvicens/atomic-fruit-service --context-dir=. --name=atomic-fruit-service-native -n ${PROJECT_NAME}
+oc new-app quay.io/quarkus/ubi-quarkus-native-s2i:${GRAALVM_VERSION}-java11~https://github.com/cvicens/atomic-fruit-service --context-dir=. --name=atomic-fruit-service-native -n ${PROJECT_NAME}-native
 
-oc label dc/atomic-fruit-service-native app.openshift.io/runtime=quarkus --overwrite -n ${PROJECT_NAME}
-oc label dc/atomic-fruit-service-native app.kubernetes.io/part-of=${APP_NAME} --overwrite -n ${PROJECT_NAME}
-oc annotate dc/atomic-fruit-service-native app.openshift.io/connects-to=fruits-database --overwrite -n ${PROJECT_NAME}
+oc label deployment/atomic-fruit-service-native app.openshift.io/runtime=quarkus --overwrite -n ${PROJECT_NAME}-native && \
+oc label deployment/atomic-fruit-service-native app.kubernetes.io/part-of=${APP_NAME} --overwrite -n ${PROJECT_NAME}-native && \
+oc annotate deployment/atomic-fruit-service-native app.openshift.io/connects-to=fruits-database --overwrite -n ${PROJECT_NAME}-native
 ```
 
 > You may need to add resources to the BuildConfig
