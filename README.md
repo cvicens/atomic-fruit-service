@@ -479,17 +479,18 @@ Add the following properties to your `./src/main/resources/application.propertie
 
 ```properties
 # Data Base related properties
-quarkus.datasource.url = jdbc:postgresql://my-database:5432/my_data
-%che.quarkus.datasource.url = jdbc:postgresql://my-database.atomic-fruit:5432/my_data
-#%dev.quarkus.datasource.url = jdbc:postgresql://127.0.0.1:5432/my_data
-%dev.quarkus.datasource.url = jdbc:h2:mem:myDB
-%dev.quarkus.datasource.driver = org.h2.Driver
-%dev.quarkus.datasource.username = username-default
-%test.quarkus.datasource.url = jdbc:h2:mem:myDB
-%test.quarkus.datasource.driver =org.h2.Driver
-%test.quarkus.datasource.username = username-default
-quarkus.datasource.driver = org.postgresql.Driver
-quarkus.hibernate-orm.dialect = org.hibernate.dialect.PostgreSQL95Dialect
+
+#quarkus.datasource.jdbc.url = jdbc:postgresql://my-database:5432/my_data
+quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
+quarkus.datasource.db-kind=postgresql
+
+#%dev.quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
+#%dev.quarkus.datasource.db-kind=postgresql
+#%dev.quarkus.datasource.jdbc.url = jdbc:h2:mem:myDB
+#%dev.quarkus.datasource.db-kind=h2
+#%dev.quarkus.datasource.username = username-default
+
+#quarkus.hibernate-orm.dialect = org.hibernate.dialect.PostgreSQL95Dialect
 quarkus.datasource.username = luke
 quarkus.datasource.password = secret
 
