@@ -480,8 +480,8 @@ Add the following properties to your `./src/main/resources/application.propertie
 ```properties
 # Data Base related properties
 
-#quarkus.datasource.jdbc.url = jdbc:postgresql://my-database:5432/my_data
-quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
+quarkus.datasource.jdbc.url = jdbc:postgresql://my-database:5432/my_data
+#quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
 quarkus.datasource.db-kind=postgresql
 
 #%dev.quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
