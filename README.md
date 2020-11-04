@@ -18,7 +18,7 @@ This is sample Fruit service generated from a maven artifact that generates all 
 export PROJECT_NAME="atomic-fruit"
 export APP_NAME="fruits-app"
 
-export QUARKUS_VERSION="1.9.0.Final"
+export QUARKUS_VERSION="1.8.1.Final"
 
 export GRAALVM_VERSION="20.2.0"
 GRAALVM_HOME=$(pwd)/graalvm-ce-java11-${GRAALVM_VERSION}
