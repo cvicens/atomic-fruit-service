@@ -18,7 +18,7 @@ This is sample Fruit service generated from a maven artifact that generates all 
 export PROJECT_NAME="atomic-fruit"
 export APP_NAME="fruits-app"
 
-export QUARKUS_VERSION="1.8.1.Final"
+export QUARKUS_VERSION="1.9.2.Final"
 
 export GRAALVM_VERSION="20.2.0"
 GRAALVM_HOME=$(pwd)/graalvm-ce-java11-${GRAALVM_VERSION}
@@ -146,6 +146,15 @@ This mode generates a Quarkus native binary file using an image and builds an im
 > ./mvnw package -Pnative -Dquarkus.native.container-build=true -Dquarkus.native.builder-image=quay.io/quarkus/ubi-quarkus-mandrel:{mandrel-flavor}
 > ```
 
+> **NOTE 2:**
+>
+> If you want/need to set the container runtime you can use `-Dquarkus.native.container-runtime=(podman/docker)`
+> 
+> For instance to use `podman` (then use `podman` to build the image, etc.):
+> ```
+> ./mvnw package -DskipTests -Pnative -Dquarkus.native.container-build=true -Dquarkus.native.container-runtime=podman
+> ```
+
 ```sh
 ./mvnw package -DskipTests -Pnative -Dquarkus.native.container-build=true
 docker build -f src/main/docker/Dockerfile.native -t atomic-fruit-service:1.0-SNAPSHOT .
@@ -174,7 +183,9 @@ docker push quay.io/<quay_user>/atomic-fruit-service:1.0-SNAPSHOT
 
 # [OPTIONAL] Docker-Native Mode 1 step
 
-> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image)
+> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image). 
+
+> **WARNING:** For now you cannot use `podman` in this case... :-( [this](https://github.com/quarkusio/quarkus/blob/master/extensions/container-image/container-image-docker/deployment/src/main/java/io/quarkus/container/image/docker/deployment/DockerProcessor.java) is the culprit.
 
 ```
 ./mvnw quarkus:add-extension -Dextensions="container-image-docker"
@@ -199,6 +210,8 @@ Ctrl+C to stop.
 # [OPTIONAL] Docker-JVM Mode 1 step
 
 > **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image)
+
+> **WARNING:** For now you cannot use `podman` in this case... :-( [this](https://github.com/quarkusio/quarkus/blob/master/extensions/container-image/container-image-docker/deployment/src/main/java/io/quarkus/container/image/docker/deployment/DockerProcessor.java) is the culprit.
 
 ```
 ./mvnw quarkus:add-extension -Dextensions="container-image-docker"
