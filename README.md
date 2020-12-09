@@ -303,7 +303,7 @@ We can run our app in development mode, to do so we have to do as follows:
 > **NOTE:** In this case we're using the `dev` profile
 
 ```sh
-./mvnw compile quarkus:dev
+./mvnw quarkus:dev
 ```
 
 As we have done several times before, from a different terminal or using a browser try this url: http://localhost:8080/fruit
@@ -494,14 +494,16 @@ Add the following properties to your `./src/main/resources/application.propertie
 # Data Base related properties
 
 quarkus.datasource.jdbc.url = jdbc:postgresql://my-database:5432/my_data
-#quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
 quarkus.datasource.db-kind=postgresql
 
-#%dev.quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
-#%dev.quarkus.datasource.db-kind=postgresql
+%dev.quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
+%dev.quarkus.datasource.db-kind=postgresql
 #%dev.quarkus.datasource.jdbc.url = jdbc:h2:mem:myDB
 #%dev.quarkus.datasource.db-kind=h2
 #%dev.quarkus.datasource.username = username-default
+#%test.quarkus.datasource.jdbc.url = jdbc:h2:mem:myDB
+#%test.quarkus.datasource.db-kind=h2
+#%test.quarkus.datasource.username = username-default
 
 #quarkus.hibernate-orm.dialect = org.hibernate.dialect.PostgreSQL95Dialect
 quarkus.datasource.username = luke
@@ -542,7 +544,7 @@ In a different terminal...
 
 ```sh
 POD_NAME=$(kubectl get pod -n ${PROJECT_NAME} -o jsonpath='{.items[0].metadata.name}')
-kubectl port-forward ${POD_NAME} 5432
+kubectl port-forward ${POD_NAME} 5432:5432 -n ${PROJECT_NAME} 
 ```
 
 In your current terminal run your code using profile `dev`
@@ -596,11 +598,15 @@ Second, change some datasource related properties in `application.properties`
 
 > **Notice** that we have changed the value of `dev.quarkus.datasource.url` now the url points to H2 instead of PostgreSQL, so no need to port-forward our DB running in our cluster.
 
-```
-#%dev.quarkus.datasource.url = jdbc:postgresql://127.0.0.1:5432/my_data
-%dev.quarkus.datasource.url=jdbc:h2:mem:myDB
-%dev.quarkus.datasource.driver=org.h2.Driver
-%dev.quarkus.datasource.username=username-default
+```properties
+#%dev.quarkus.datasource.jdbc.url = jdbc:postgresql://localhost:5432/my_data
+#%dev.quarkus.datasource.db-kind=postgresql
+%dev.quarkus.datasource.jdbc.url = jdbc:h2:mem:myDB
+%dev.quarkus.datasource.db-kind=h2
+%dev.quarkus.datasource.username = username-default
+%test.quarkus.datasource.jdbc.url = jdbc:h2:mem:myDB
+%test.quarkus.datasource.db-kind=h2
+%test.quarkus.datasource.username = username-default
 ```
 
 If, accidentally, you stopped the application you can run it again using profile `dev` running the next command. However this time the application will run queries against H2.
@@ -773,9 +779,10 @@ quarkus.openshift.version=1.0-rc.1
 Let's add a some additional labels `part-of` and `name`, and a custom label:
 
 ```properties
+# Recommended labels and a custom label
 quarkus.kubernetes.part-of=fruits-app
-quarkus.kubernetes.name=quarkus
-quarkus.kubernetes.labels.foo=bar
+quarkus.kubernetes.name=atomit-fruit-service
+quarkus.kubernetes.labels.deparment=fruity-dept
 ```
 
 > **NOTE:**
@@ -792,22 +799,45 @@ annotations:
 Let's add a custom annotation:
 
 ```properties
+# Custom annotations
 quarkus.kubernetes.annotations.foo=bar
 quarkus.kubernetes.annotations."app.quarkus/id"=42
 ```
+
+So far we haven't prepared the production profile, for instance we have no secret to keep the database credentials. Let's do something about it. Let's create a secret locally first.
+
+> NOTE: `kubernetes` extension takes the file we're generating and merge it with the one generated 
+
+```sh
+mkdir -p ./src/main/kubernetes
+cat <<EOF > ./src/main/kubernetes/kubernetes.yml
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: fruits-database-secret
+stringData:
+  user: luke
+  password: secret
+EOF
+```
+
 
 Now let's add the environment variables we need to connect to the database:
 
 ```properties
 # Environment variables
-quarkus.kubernetes.env.vars.DB_USERNAME=luke
-quarkus.kubernetes.env.vars.DB_PASSWORD=secret
+quarkus.kubernetes.env.mapping.db-username.from-secret=fruits-database-secret
+quarkus.kubernetes.env.mapping.db-username.with-key=user
+quarkus.kubernetes.env.mapping.db-password.from-secret=fruits-database-secret
+quarkus.kubernetes.env.mapping.db-password.with-key=password
 ```
 
 Let's add a custom resource, an ingress rule, that points and should expose the Service generated for our Deployment.
 
 ```sh
-cat << EOF > ./src/main/kubernetes/kubernetes.yml
+cat << EOF >> ./src/main/kubernetes/kubernetes.yml
+---
 apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
