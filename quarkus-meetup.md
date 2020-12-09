@@ -748,7 +748,7 @@ Let's add a some additional labels `part-of` and `name`, and a custom label:
 # Recommended labels and a custom label for kubernetes and openshift
 quarkus.openshift.part-of=fruits-app
 quarkus.openshift.name=atomic-fruit-service
-quarkus.openshift.labels.deparment=fruity-dept
+quarkus.openshift.labels.department=fruity-dept
 ```
 
 Regarding annotations, out of the box, the generated resources will be annotated with version control related information that can be used either by tooling, or by the user for troubleshooting purposes.
@@ -839,11 +839,29 @@ What about native in this case? Easy, just add `-Dquarkus.native.container-build
 
 # Deploy to OpenShift as a Knative service
 
-Let's add a new target platform.
+Let's add a new target platform...
 
 ```properties
 # Generate OpenShift and Knative descriptors
 quarkus.kubernetes.deployment-target=openshift,knative
+```
+
+And this properties to change the 
+
+```properties
+# Knative
+quarkus.container-image.registry=image-registry.openshift-image-registry.svc:5000
+quarkus.container-image.group=atomic-fruit
+quarkus.container-image.tag=1.0-SNAPSHOT
+quarkus.knative.name=atomic-fruit-service-kn
+quarkus.knative.version=1.0
+quarkus.knative.part-of=fruits-app
+quarkus.knative.annotations."app.openshift.io/connects-to"=my-database
+quarkus.knative.labels."app.openshift.io/runtime"=quarkus
+quarkus.knative.env.mapping.db-username.from-secret=fruits-database-secret
+quarkus.knative.env.mapping.db-username.with-key=user
+quarkus.knative.env.mapping.db-password.from-secret=fruits-database-secret
+quarkus.knative.env.mapping.db-password.with-key=password
 ```
 
 kubectl apply -f target/kubernetes/knative.json
