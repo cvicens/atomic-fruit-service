@@ -864,6 +864,6 @@ quarkus.knative.env.mapping.db-password.from-secret=fruits-database-secret
 quarkus.knative.env.mapping.db-password.with-key=password
 ```
 
+```sh
 kubectl apply -f target/kubernetes/knative.json
-
-
+```
