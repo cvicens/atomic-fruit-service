@@ -222,7 +222,7 @@ Ctrl+C to stop.
 
 ```
 ./mvnw quarkus:add-extension -Dextensions="container-image-docker"
-./mvnw package -Pnative -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
+./mvnw package -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Pnative
 ```
 
 Run the image created.
@@ -493,7 +493,6 @@ Add the following properties to your `./src/main/resources/application.propertie
 
 ```properties
 # Data Base related properties
-
 quarkus.datasource.jdbc.url = jdbc:postgresql://my-database:5432/my_data
 quarkus.datasource.db-kind=postgresql
 
@@ -627,7 +626,7 @@ curl http://localhost:8080/fruit
 Let's try to create a Fruit object in our database.
 
 ```sh
-curl -vvv -d '{"name": "banana", "season": "summer"}' -H "Content-Type: application/json" POST http://localhost:8080/fruit
+curl -vvv -d '{"name": "Banana", "season": "Summer"}' -H "Content-Type: application/json" POST http://localhost:8080/fruit
 * Rebuilt URL to: POST/
 * Could not resolve host: POST
 * Closing connection 0
@@ -846,7 +845,9 @@ Let's add a new target platform...
 quarkus.kubernetes.deployment-target=openshift,knative
 ```
 
-And this properties to change the 
+And this properties to tune the Knative deployment.
+
+> **WARNING:** If you have changed the by default value for PROJECT_NAME change this line below accordingly!
 
 ```properties
 # Knative
@@ -864,6 +865,9 @@ quarkus.knative.env.mapping.db-password.from-secret=fruits-database-secret
 quarkus.knative.env.mapping.db-password.with-key=password
 ```
 
+Time to deploy using Knative.
+
 ```sh
-kubectl apply -f target/kubernetes/knative.json
+./mvnw clean package -DskipTests
+kubectl apply -f target/kubernetes/knative.yml
 ```
