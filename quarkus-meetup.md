@@ -645,66 +645,6 @@ curl http://localhost:8080/health
 
 Ctrl+C
 
-# Automatic builds
-
-## Automatic build for JVM mode using `docker`
-
-With automatic builds we have to set `registry` and `group` to tag the image for pushing to the registry. Add these properties to the `application.properties` files or add them using `-D`.
-
-```properties
-# OCI Image
-quarkus.container-image.registry=<registry>
-quarkus.container-image.group=<registry_user>
-```
-
-> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image)
-
-> **WARNING:** For now you cannot use `podman` in this case... :-( [this](https://github.com/quarkusio/quarkus/blob/master/extensions/container-image/container-image-docker/deployment/src/main/java/io/quarkus/container/image/docker/deployment/DockerProcessor.java) is the culprit.
-
-```sh
-./mvnw quarkus:add-extension -Dextensions="container-image-docker"
-./mvnw package -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
-```
-
-Run the image created.
-
-```sh
-docker run -i --rm -p 8080:8080 <registry>/<registry_user>/atomic-fruit-service:1.0-SNAPSHOT
-```
-
-Test from another terminal or a browser, you should receive a `hello` string.
-
-```sh
-curl http://localhost:8080/fruit
-```
-
-Ctrl+C to stop.
-
-## Automatic build for Native mode using `docker`
-
-> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image). 
-
-> **WARNING:** For now you cannot use `podman` in this case... :-( [this](https://github.com/quarkusio/quarkus/blob/master/extensions/container-image/container-image-docker/deployment/src/main/java/io/quarkus/container/image/docker/deployment/DockerProcessor.java) is the culprit.
-
-```
-./mvnw quarkus:add-extension -Dextensions="container-image-docker"
-./mvnw package -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Pnative
-```
-
-Run the image created.
-
-```sh
-docker run -i --rm -p 8080:8080 <registry>/<registry_user>/atomic-fruit-service:1.0-SNAPSHOT
-```
-
-Test from another terminal or a browser, you should receive a `hello` string.
-
-```sh
-curl http://localhost:8080/fruit
-```
-
-Ctrl+C to stop.
-
 # Different deployment techniques
 
 ## Deploying to OpenShift
@@ -873,3 +813,63 @@ Time to deploy using Knative.
 ./mvnw clean package -DskipTests
 kubectl apply -f target/kubernetes/knative.yml
 ```
+
+# ANNEX: Automatic builds
+
+## Automatic build for JVM mode using `docker`
+
+With automatic builds we have to set `registry` and `group` to tag the image for pushing to the registry. Add these properties to the `application.properties` files or add them using `-D`.
+
+```properties
+# OCI Image
+quarkus.container-image.registry=<registry>
+quarkus.container-image.group=<registry_user>
+```
+
+> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image)
+
+> **WARNING:** For now you cannot use `podman` in this case... :-( [this](https://github.com/quarkusio/quarkus/blob/master/extensions/container-image/container-image-docker/deployment/src/main/java/io/quarkus/container/image/docker/deployment/DockerProcessor.java) is the culprit.
+
+```sh
+./mvnw quarkus:add-extension -Dextensions="container-image-docker"
+./mvnw package -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true
+```
+
+Run the image created.
+
+```sh
+docker run -i --rm -p 8080:8080 <registry>/<registry_user>/atomic-fruit-service:1.0-SNAPSHOT
+```
+
+Test from another terminal or a browser, you should receive a `hello` string.
+
+```sh
+curl http://localhost:8080/fruit
+```
+
+Ctrl+C to stop.
+
+## Automatic build for Native mode using `docker`
+
+> **NOTE:** Extentions for building images [here](https://quarkus.io/guides/container-image). 
+
+> **WARNING:** For now you cannot use `podman` in this case... :-( [this](https://github.com/quarkusio/quarkus/blob/master/extensions/container-image/container-image-docker/deployment/src/main/java/io/quarkus/container/image/docker/deployment/DockerProcessor.java) is the culprit.
+
+```
+./mvnw quarkus:add-extension -Dextensions="container-image-docker"
+./mvnw package -Dquarkus.native.container-build=true -Dquarkus.container-image.build=true -Pnative
+```
+
+Run the image created.
+
+```sh
+docker run -i --rm -p 8080:8080 <registry>/<registry_user>/atomic-fruit-service:1.0-SNAPSHOT
+```
+
+Test from another terminal or a browser, you should receive a `hello` string.
+
+```sh
+curl http://localhost:8080/fruit
+```
+
+Ctrl+C to stop.
