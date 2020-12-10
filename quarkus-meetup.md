@@ -740,7 +740,7 @@ quarkus.openshift.env.mapping.db-password.with-key=password
 Let's package our application and have a look to the descriptors generated.
 
 ```
-./mvnw package
+./mvnw clean package
 ```
 
 Go to [`./target/kubernetes/openshift.yml`](./target/kubernetes/openshift.yml) there you'll find: Service and Deployment...
